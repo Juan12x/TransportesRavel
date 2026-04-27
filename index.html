@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransControl — Gestión de Viajes</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M6 20h3l2-8h10l2 8h3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="22" r="2" fill="white"/><circle cx="21" cy="22" r="2" fill="white"/><path d="M9 16h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>TransControl</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-view="records">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        <span>Registros</span>
+      </a>
+      <a href="#" class="nav-item" data-view="new">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>Nuevo Viaje</span>
+      </a>
+      <a href="#" class="nav-item" data-view="calendar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Calendario</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="recordCount">0 registros</span>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn">&#9776;</button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="topbarNewBtn">+ Nuevo Viaje</button>
+      </div>
+    </header>
+
+    <!-- VIEWS -->
+    <div class="content">
+
+      <!-- DASHBOARD VIEW -->
+      <section class="view active" id="view-dashboard">
+        <div class="page-header">
+          <h1>Dashboard</h1>
+          <p>Resumen general de la operación</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statTotal">0</span>
+              <span class="stat-label">Total Viajes</span>
+            </div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statCompleted">0</span>
+              <span class="stat-label">Completados</span>
+            </div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statPending">0</span>
+              <span class="stat-label">Pendientes</span>
+            </div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statRevenue">$0</span>
+              <span class="stat-label">Ingresos Totales</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Próximos Viajes</h3>
+              <a href="#" class="link" data-view="records">Ver todos</a>
+            </div>
+            <div id="upcomingList" class="upcoming-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>Estado de Viajes</h3>
+            </div>
+            <div class="chart-container" id="statusChart"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RECORDS VIEW -->
+      <section class="view" id="view-records">
+        <div class="page-header">
+          <h1>Registros de Viajes</h1>
+          <p>Historial completo de servicios</p>
+        </div>
+        <div class="card">
+          <div class="filters-bar">
+            <input type="text" id="searchInput" placeholder="Buscar por cliente, origen, destino..." class="search-input" />
+            <select id="filterStatus" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Confirmado">Confirmado</option>
+              <option value="En curso">En curso</option>
+              <option value="Completado">Completado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+            <select id="filterPayment" class="filter-select">
+              <option value="">Todos los pagos</option>
+              <option value="Pendiente">Pago Pendiente</option>
+              <option value="Parcial">Pago Parcial</option>
+              <option value="Pagado">Pagado</option>
+            </select>
+            <button class="btn btn-outline" id="exportBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar CSV
+            </button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Cliente</th>
+                  <th>Teléfono</th>
+                  <th>Fecha Inicio</th>
+                  <th>Origen</th>
+                  <th>Destino</th>
+                  <th>Costo</th>
+                  <th>Estado Viaje</th>
+                  <th>Pago</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="tableEmpty" style="display:none;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            <p>No hay registros aún</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- NEW / EDIT TRIP VIEW -->
+      <section class="view" id="view-new">
+        <div class="page-header">
+          <h1 id="formTitle">Nuevo Viaje</h1>
+          <p id="formSubtitle">Completa los datos del servicio</p>
+        </div>
+
+        <form id="tripForm" class="form-grid">
+          <input type="hidden" id="tripId" />
+
+          <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Datos del Cliente
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="clientName">Nombre Completo <span class="required">*</span></label>
+                <input type="text" id="clientName" placeholder="Ej: Juan Pérez García" required />
+              </div>
+              <div class="form-group">
+                <label for="clientRut">RUT / Documento <span class="required">*</span></label>
+                <input type="text" id="clientRut" placeholder="Ej: 12.345.678-9" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="clientPhone">Teléfono <span class="required">*</span></label>
+                <input type="tel" id="clientPhone" placeholder="+56 9 1234 5678" required />
+              </div>
+              <div class="form-group">
+                <label for="clientEmail">Correo Electrónico</label>
+                <input type="email" id="clientEmail" placeholder="cliente@correo.com" />
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: DETALLES DEL VIAJE -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              Detalles del Viaje
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tripType">Tipo de Viaje <span class="required">*</span></label>
+                <select id="tripType" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="Solo ida">Solo ida</option>
+                  <option value="Ida y vuelta">Ida y vuelta</option>
+                  <option value="Tour / Paseo">Tour / Paseo</option>
+                  <option value="Traslado aeropuerto">Traslado aeropuerto</option>
+                  <option value="Encomienda">Encomienda</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="passengers">N° de Pasajeros <span class="required">*</span></label>
+                <input type="number" id="passengers" min="1" max="100" placeholder="1" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="departureDate">Fecha de Inicio <span class="required">*</span></label>
+                <input type="datetime-local" id="departureDate" required />
+              </div>
+              <div class="form-group">
+                <label for="returnDate">Fecha de Regreso</label>
+                <input type="datetime-local" id="returnDate" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="origin">Lugar de Retiro / Salida <span class="required">*</span></label>
+                <input type="text" id="origin" placeholder="Dirección de origen" required />
+              </div>
+              <div class="form-group">
+                <label for="destination">Destino <span class="required">*</span></label>
+                <input type="text" id="destination" placeholder="Dirección de destino" required />
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: VEHÍCULO Y CONDUCTOR -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/><circle cx="15.657" cy="17.657" r="2"/><circle cx="5" cy="17" r="2"/><path d="M15 5H3"/></svg>
+              Vehículo y Conductor
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="driver">Conductor</label>
+                <input type="text" id="driver" placeholder="Nombre del conductor" />
+              </div>
+              <div class="form-group">
+                <label for="vehicle">Vehículo / Patente</label>
+                <input type="text" id="vehicle" placeholder="Ej: Bus / ABCD12" />
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: COSTOS Y PAGO -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Costo y Pago
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cost">Costo del Viaje <span class="required">*</span></label>
+                <div class="input-prefix">
+                  <span>$</span>
+                  <input type="number" id="cost" min="0" step="1000" placeholder="0" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="paymentStatus">Estado de Pago <span class="required">*</span></label>
+                <select id="paymentStatus" required>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Parcial">Pago Parcial</option>
+                  <option value="Pagado">Pagado</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="paymentMethod">Forma de Pago</label>
+                <select id="paymentMethod">
+                  <option value="">Seleccionar...</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia bancaria</option>
+                  <option value="Tarjeta débito">Tarjeta débito</option>
+                  <option value="Tarjeta crédito">Tarjeta crédito</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="tripStatus">Estado del Viaje <span class="required">*</span></label>
+                <select id="tripStatus" required>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Confirmado">Confirmado</option>
+                  <option value="En curso">En curso</option>
+                  <option value="Completado">Completado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 5: OBSERVACIONES -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Observaciones
+            </div>
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="observations">Observaciones del Viaje</label>
+                <textarea id="observations" rows="3" placeholder="Instrucciones especiales, paradas adicionales, equipaje, etc."></textarea>
+              </div>
+            </div>
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="internalNotes">Notas Internas</label>
+                <textarea id="internalNotes" rows="2" placeholder="Notas solo visibles para el equipo..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+              Guardar Viaje
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- CALENDAR VIEW -->
+      <section class="view" id="view-calendar">
+        <div class="page-header">
+          <h1>Calendario de Viajes</h1>
+          <p>Vista mensual de servicios programados</p>
+        </div>
+        <div class="card">
+          <div class="calendar-nav">
+            <button class="btn btn-outline" id="calPrev">&#8592;</button>
+            <h3 id="calMonthTitle"></h3>
+            <button class="btn btn-outline" id="calNext">&#8594;</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- DETAIL MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="detailModal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Detalle del Viaje</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="modalEdit">Editar</button>
+        <button class="btn btn-danger" id="modalDelete">Eliminar</button>
+        <button class="btn btn-ghost" id="modalPrint">Imprimir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="modal-overlay" id="confirmOverlay">
+    <div class="modal small-modal">
+      <div class="modal-header">
+        <h2>Confirmar eliminación</h2>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="confirmCancel">Cancelar</button>
+        <button class="btn btn-danger" id="confirmDelete">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
