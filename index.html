@@ -3,21 +3,203 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TransControl — Gestión de Viajes</title>
+  <title>Transportes Ravel — Solicitud de Transporte</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
+  <!-- ═══════════════════════════════════════════════
+       VISTA CLIENTE (visible por defecto)
+  ════════════════════════════════════════════════ -->
+  <div class="client-page" id="clientPage">
+
+    <!-- Formulario de solicitud -->
+    <div class="client-card" id="clientFormCard">
+      <div class="client-header">
+        <div class="client-logo">
+          <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#2563EB"/>
+            <path d="M6 20h3l2-8h10l2 8h3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="11" cy="22" r="2" fill="white"/>
+            <circle cx="21" cy="22" r="2" fill="white"/>
+            <path d="M9 16h14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Transportes Ravel</span>
+        </div>
+        <h1>Solicitar Servicio de Transporte</h1>
+        <p>Completa el formulario y nos contactaremos contigo para confirmar tu reserva.</p>
+      </div>
+
+      <form id="clientForm" class="client-form">
+
+        <!-- SECCIÓN 1: DATOS DEL CLIENTE Y FACTURACIÓN -->
+        <div class="cf-section">
+          <div class="cf-section-title">Datos del Cliente y Facturación</div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_name">Nombre Contacto del Servicio <span class="required">*</span></label>
+              <input type="text" id="cf_name" placeholder="Nombre completo" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_phone">Teléfono Contacto <span class="required">*</span></label>
+              <input type="tel" id="cf_phone" placeholder="+57 300 000 0000" required />
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_email">Correo Electrónico del Cliente <span class="required">*</span></label>
+              <input type="email" id="cf_email" placeholder="correo@empresa.com" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_invoiceDate">Fecha Emisión Factura <span class="required">*</span></label>
+              <input type="date" id="cf_invoiceDate" required />
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: DATOS DEL SERVICIO -->
+        <div class="cf-section">
+          <div class="cf-section-title">Datos del Servicio</div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_passengers">Capacidad / Cantidad de Personas <span class="required">*</span></label>
+              <input type="number" id="cf_passengers" min="1" max="500" placeholder="Ej: 23" required />
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_startDate">Fecha Inicial del Servicio <span class="required">*</span></label>
+              <input type="date" id="cf_startDate" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_endDate">Fecha Final del Servicio <span class="required">*</span></label>
+              <input type="date" id="cf_endDate" required />
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_origin">Punto de Origen <span class="required">*</span></label>
+              <input type="text" id="cf_origin" placeholder="Ciudad / Dirección de origen" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_destination">Punto Destino <span class="required">*</span></label>
+              <input type="text" id="cf_destination" placeholder="Ciudad / Dirección de destino" required />
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_departureTime">Hora de Salida <span class="required">*</span></label>
+              <input type="time" id="cf_departureTime" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_returnTime">Hora de Retorno <span class="required">*</span></label>
+              <input type="time" id="cf_returnTime" required />
+            </div>
+          </div>
+          <div class="cf-row cf-full">
+            <div class="form-group">
+              <label for="cf_observations">Observaciones a Tener en Cuenta en el Servicio <span class="required">*</span></label>
+              <textarea id="cf_observations" rows="3" placeholder="Indicaciones especiales, paradas, equipaje, etc." required></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 3: DATOS CONTABLES -->
+        <div class="cf-section">
+          <div class="cf-section-title">Datos Contables</div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_serviceValue">Valor del Servicio <span class="required">*</span></label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="cf_serviceValue" min="0" step="1000" placeholder="0" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="cf_transporterValue">Valor a Pagar Transportador <span class="required">*</span></label>
+              <div class="input-prefix">
+                <span>$</span>
+                <input type="number" id="cf_transporterValue" min="0" step="1000" placeholder="0" required />
+              </div>
+              <span class="field-hint">Mínimo 20% de utilidad</span>
+            </div>
+          </div>
+          <div class="cf-row cf-full">
+            <div class="form-group">
+              <label for="cf_invoiceDetail">Detalle para la Factura <span class="required">*</span></label>
+              <textarea id="cf_invoiceDetail" rows="2" placeholder="Ej: SERVICIO DE TRANSPORTE 12/02/2026 MEDELLÍN - ÁREA METROPOLITANA. Si lleva orden de compra o se factura después de aprobación del cliente, indicarlo aquí." required></textarea>
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label>Medio de Pago <span class="required">*</span></label>
+              <div class="cf-radio-group">
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_paymentMethod" value="Crédito" required />
+                  Crédito
+                </label>
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_paymentMethod" value="Contado" />
+                  Contado
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="cf_dueDate">Fecha de Vencimiento <span class="required">*</span></label>
+              <input type="date" id="cf_dueDate" required />
+              <span class="field-hint">Ocasional: 1 día antes del servicio. Crédito: según días autorizados desde factura.</span>
+            </div>
+          </div>
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_invoiceEmail">Correo para Facturación Electrónica <span class="required">*</span></label>
+              <input type="email" id="cf_invoiceEmail" placeholder="facturacion@empresa.com" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_supportDocs">Documentos Soporte</label>
+              <input type="text" id="cf_supportDocs" placeholder="Cédula, RUT, Contrato (solo cliente nuevo)" />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary cf-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+          Enviar Solicitud
+        </button>
+
+      </form>
+
+      <div class="client-footer">
+        <button class="admin-link" id="adminAccessBtn">Acceso Equipo</button>
+      </div>
+    </div>
+
+    <!-- Pantalla de éxito tras enviar -->
+    <div class="client-card success-card" id="clientSuccessCard">
+      <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+      </div>
+      <h2>¡Solicitud Enviada!</h2>
+      <p>Recibimos tu solicitud correctamente.<br/>Nos contactaremos contigo pronto para confirmar el servicio.</p>
+      <button class="btn btn-primary" id="newRequestBtn">Hacer Otra Solicitud</button>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════
+       VISTA EQUIPO (requiere PIN)
+  ════════════════════════════════════════════════ -->
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="logo">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M6 20h3l2-8h10l2 8h3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="22" r="2" fill="white"/><circle cx="21" cy="22" r="2" fill="white"/><path d="M9 16h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-        <span>TransControl</span>
+        <span>Transportes Ravel</span>
       </div>
-      <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-view="dashboard">
@@ -39,13 +221,13 @@
     </nav>
     <div class="sidebar-footer">
       <span id="recordCount">0 registros</span>
+      <button class="exit-admin-btn" id="exitAdminBtn">&#8592; Salir del panel</button>
     </div>
   </aside>
 
   <!-- MAIN -->
   <main class="main" id="main">
 
-    <!-- TOP BAR -->
     <header class="topbar">
       <button class="menu-btn" id="menuBtn">&#9776;</button>
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
@@ -54,7 +236,6 @@
       </div>
     </header>
 
-    <!-- VIEWS -->
     <div class="content">
 
       <!-- DASHBOARD VIEW -->
@@ -66,34 +247,21 @@
         <div class="stats-grid">
           <div class="stat-card blue">
             <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
-            <div class="stat-info">
-              <span class="stat-value" id="statTotal">0</span>
-              <span class="stat-label">Total Viajes</span>
-            </div>
+            <div class="stat-info"><span class="stat-value" id="statTotal">0</span><span class="stat-label">Total Viajes</span></div>
           </div>
           <div class="stat-card green">
             <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
-            <div class="stat-info">
-              <span class="stat-value" id="statCompleted">0</span>
-              <span class="stat-label">Completados</span>
-            </div>
+            <div class="stat-info"><span class="stat-value" id="statCompleted">0</span><span class="stat-label">Completados</span></div>
           </div>
           <div class="stat-card yellow">
             <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div>
-            <div class="stat-info">
-              <span class="stat-value" id="statPending">0</span>
-              <span class="stat-label">Pendientes</span>
-            </div>
+            <div class="stat-info"><span class="stat-value" id="statPending">0</span><span class="stat-label">Pendientes</span></div>
           </div>
           <div class="stat-card purple">
             <div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-            <div class="stat-info">
-              <span class="stat-value" id="statRevenue">$0</span>
-              <span class="stat-label">Ingresos Totales</span>
-            </div>
+            <div class="stat-info"><span class="stat-value" id="statRevenue">$0</span><span class="stat-label">Ingresos Totales</span></div>
           </div>
         </div>
-
         <div class="dashboard-grid">
           <div class="card">
             <div class="card-header">
@@ -103,9 +271,7 @@
             <div id="upcomingList" class="upcoming-list"></div>
           </div>
           <div class="card">
-            <div class="card-header">
-              <h3>Estado de Viajes</h3>
-            </div>
+            <div class="card-header"><h3>Estado de Viajes</h3></div>
             <div class="chart-container" id="statusChart"></div>
           </div>
         </div>
@@ -171,11 +337,9 @@
           <h1 id="formTitle">Nuevo Viaje</h1>
           <p id="formSubtitle">Completa los datos del servicio</p>
         </div>
-
         <form id="tripForm" class="form-grid">
           <input type="hidden" id="tripId" />
 
-          <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
           <div class="form-section">
             <div class="form-section-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -203,7 +367,6 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 2: DETALLES DEL VIAJE -->
           <div class="form-section">
             <div class="form-section-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -249,7 +412,6 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 3: VEHÍCULO Y CONDUCTOR -->
           <div class="form-section">
             <div class="form-section-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/><circle cx="15.657" cy="17.657" r="2"/><circle cx="5" cy="17" r="2"/><path d="M15 5H3"/></svg>
@@ -267,7 +429,6 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 4: COSTOS Y PAGO -->
           <div class="form-section">
             <div class="form-section-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -315,7 +476,6 @@
             </div>
           </div>
 
-          <!-- SECCIÓN 5: OBSERVACIONES -->
           <div class="form-section">
             <div class="form-section-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -364,7 +524,8 @@
     </div>
   </main>
 
-  <!-- DETAIL MODAL -->
+
+  <!-- ═══ MODAL DETALLE ═══ -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal" id="detailModal">
       <div class="modal-header">
@@ -380,18 +541,37 @@
     </div>
   </div>
 
-  <!-- CONFIRM DIALOG -->
+  <!-- ═══ MODAL CONFIRMAR ELIMINAR ═══ -->
   <div class="modal-overlay" id="confirmOverlay">
     <div class="modal small-modal">
-      <div class="modal-header">
-        <h2>Confirmar eliminación</h2>
-      </div>
+      <div class="modal-header"><h2>Confirmar eliminación</h2></div>
       <div class="modal-body">
         <p>¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="confirmCancel">Cancelar</button>
         <button class="btn btn-danger" id="confirmDelete">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL PIN ═══ -->
+  <div class="modal-overlay" id="pinOverlay">
+    <div class="modal small-modal">
+      <div class="modal-header">
+        <h2>Acceso Equipo</h2>
+        <button class="modal-close" id="pinClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="pinInput">Ingresa el PIN de acceso</label>
+          <input type="password" id="pinInput" placeholder="••••" maxlength="10" class="pin-input" />
+          <p class="pin-error" id="pinError">PIN incorrecto. Intenta nuevamente.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="pinCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="pinSubmitBtn">Ingresar</button>
       </div>
     </div>
   </div>

@@ -1,24 +1,133 @@
 'use strict';
 
-// ── STATE ──────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'transcontrol_trips';
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const ADMIN_PIN    = '1234';
+const STORAGE_KEY  = 'transportesravel_trips';
 
-let trips = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let currentView = 'dashboard';
-let editingId = null;
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let trips         = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let currentView   = 'dashboard';
+let editingId     = null;
 let deleteTargetId = null;
-let calendarDate = new Date();
+let calendarDate  = new Date();
 
-// ── PERSISTENCE ────────────────────────────────────────────────────────────
+// ── PERSISTENCE ───────────────────────────────────────────────────────────────
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
 }
 
 function nextId() {
-  return trips.length ? Math.max(...trips.map(t => t.id)) + 1 : 1;
+  return trips.reduce((max, t) => t.id > max ? t.id : max, 0) + 1;
 }
 
-// ── NAVIGATION ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// VISTA CLIENTE
+// ══════════════════════════════════════════════════════════════════════════════
+
+document.getElementById('clientForm').addEventListener('submit', e => {
+  e.preventDefault();
+
+  const paymentMethodEl = document.querySelector('input[name="cf_paymentMethod"]:checked');
+
+  const trip = {
+    id:               nextId(),
+    clientName:       document.getElementById('cf_name').value.trim(),
+    clientPhone:      document.getElementById('cf_phone').value.trim(),
+    clientEmail:      document.getElementById('cf_email').value.trim(),
+    invoiceDate:      document.getElementById('cf_invoiceDate').value,
+    passengers:       document.getElementById('cf_passengers').value,
+    serviceStartDate: document.getElementById('cf_startDate').value,
+    serviceEndDate:   document.getElementById('cf_endDate').value,
+    origin:           document.getElementById('cf_origin').value.trim(),
+    destination:      document.getElementById('cf_destination').value.trim(),
+    departureTime:    document.getElementById('cf_departureTime').value,
+    returnTime:       document.getElementById('cf_returnTime').value,
+    observations:     document.getElementById('cf_observations').value.trim(),
+    cost:             Number(document.getElementById('cf_serviceValue').value) || 0,
+    transporterValue: Number(document.getElementById('cf_transporterValue').value) || 0,
+    invoiceDetail:    document.getElementById('cf_invoiceDetail').value.trim(),
+    paymentMethod:    paymentMethodEl ? paymentMethodEl.value : '',
+    dueDate:          document.getElementById('cf_dueDate').value,
+    invoiceEmail:     document.getElementById('cf_invoiceEmail').value.trim(),
+    supportDocs:      document.getElementById('cf_supportDocs').value.trim(),
+    driver:           '',
+    vehicle:          '',
+    clientRut:        '',
+    tripType:         '',
+    paymentStatus:    'Pendiente',
+    tripStatus:       'Pendiente',
+    internalNotes:    '',
+    createdAt:        new Date().toISOString(),
+    updatedAt:        new Date().toISOString(),
+  };
+
+  trips.push(trip);
+  save();
+  showClientSuccess();
+});
+
+function showClientSuccess() {
+  document.getElementById('clientFormCard').style.display   = 'none';
+  document.getElementById('clientSuccessCard').style.display = 'flex';
+}
+
+function showClientForm() {
+  document.getElementById('clientForm').reset();
+  document.getElementById('clientFormCard').style.display   = 'block';
+  document.getElementById('clientSuccessCard').style.display = 'none';
+}
+
+document.getElementById('newRequestBtn').addEventListener('click', showClientForm);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACCESO ADMIN — PIN
+// ══════════════════════════════════════════════════════════════════════════════
+
+document.getElementById('adminAccessBtn').addEventListener('click', () => {
+  document.getElementById('pinInput').value   = '';
+  document.getElementById('pinError').style.display = 'none';
+  document.getElementById('pinOverlay').classList.add('open');
+  requestAnimationFrame(() => document.getElementById('pinInput').focus());
+});
+
+document.getElementById('pinSubmitBtn').addEventListener('click', checkPin);
+document.getElementById('pinInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPin();
+});
+
+function closePinModal() {
+  document.getElementById('pinOverlay').classList.remove('open');
+}
+
+function checkPin() {
+  const entered = document.getElementById('pinInput').value;
+  if (entered === ADMIN_PIN) {
+    closePinModal();
+    enterAdminMode();
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+function enterAdminMode() {
+  document.body.classList.add('admin-mode');
+  showView('dashboard');
+}
+
+document.getElementById('pinClose').addEventListener('click', closePinModal);
+document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
+
+document.getElementById('exitAdminBtn').addEventListener('click', () => {
+  document.body.classList.remove('admin-mode');
+  showClientForm();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVEGACIÓN ADMIN
+// ══════════════════════════════════════════════════════════════════════════════
+
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -41,7 +150,6 @@ function showView(name) {
   if (name === 'new' && !editingId) resetForm();
 }
 
-// ── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -63,7 +171,10 @@ document.getElementById('topbarNewBtn').addEventListener('click', () => {
   showView('new');
 });
 
-// ── DASHBOARD ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+
 function renderDashboard() {
   const total     = trips.length;
   const completed = trips.filter(t => t.tripStatus === 'Completado').length;
@@ -129,10 +240,13 @@ function renderStatusChart() {
   }).join('');
 }
 
-// ── RECORDS ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// REGISTROS
+// ══════════════════════════════════════════════════════════════════════════════
+
 function renderRecords(filtered) {
-  const data = filtered ?? trips;
-  const body = document.getElementById('recordsBody');
+  const data  = filtered ?? trips;
+  const body  = document.getElementById('recordsBody');
   const empty = document.getElementById('tableEmpty');
 
   if (!data.length) {
@@ -178,7 +292,7 @@ function filterRecords() {
   const payment = document.getElementById('filterPayment').value;
 
   const filtered = trips.filter(t => {
-    const matchSearch = !search || [t.clientName, t.origin, t.destination, t.clientRut, t.clientPhone]
+    const matchSearch  = !search || [t.clientName, t.origin, t.destination, t.clientRut, t.clientPhone]
       .some(v => (v||'').toLowerCase().includes(search));
     const matchStatus  = !status  || t.tripStatus === status;
     const matchPayment = !payment || t.paymentStatus === payment;
@@ -191,11 +305,14 @@ document.getElementById('searchInput').addEventListener('input', filterRecords);
 document.getElementById('filterStatus').addEventListener('change', filterRecords);
 document.getElementById('filterPayment').addEventListener('change', filterRecords);
 
-// ── FORM ────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// FORMULARIO ADMIN
+// ══════════════════════════════════════════════════════════════════════════════
+
 function resetForm() {
   document.getElementById('tripForm').reset();
   document.getElementById('tripId').value = '';
-  document.getElementById('formTitle').textContent = 'Nuevo Viaje';
+  document.getElementById('formTitle').textContent    = 'Nuevo Viaje';
   document.getElementById('formSubtitle').textContent = 'Completa los datos del servicio';
   document.getElementById('submitBtn').innerHTML = `
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
@@ -204,24 +321,24 @@ function resetForm() {
 
 function fillForm(trip) {
   document.getElementById('tripId').value         = trip.id;
-  document.getElementById('clientName').value     = trip.clientName   || '';
-  document.getElementById('clientRut').value      = trip.clientRut    || '';
-  document.getElementById('clientPhone').value    = trip.clientPhone  || '';
-  document.getElementById('clientEmail').value    = trip.clientEmail  || '';
-  document.getElementById('tripType').value       = trip.tripType     || '';
-  document.getElementById('passengers').value     = trip.passengers   || '';
-  document.getElementById('departureDate').value  = trip.departureDate|| '';
-  document.getElementById('returnDate').value     = trip.returnDate   || '';
-  document.getElementById('origin').value         = trip.origin       || '';
-  document.getElementById('destination').value    = trip.destination  || '';
-  document.getElementById('driver').value         = trip.driver       || '';
-  document.getElementById('vehicle').value        = trip.vehicle      || '';
-  document.getElementById('cost').value           = trip.cost         || '';
-  document.getElementById('paymentStatus').value  = trip.paymentStatus|| 'Pendiente';
-  document.getElementById('paymentMethod').value  = trip.paymentMethod|| '';
-  document.getElementById('tripStatus').value     = trip.tripStatus   || 'Pendiente';
-  document.getElementById('observations').value   = trip.observations || '';
-  document.getElementById('internalNotes').value  = trip.internalNotes|| '';
+  document.getElementById('clientName').value     = trip.clientName    || '';
+  document.getElementById('clientRut').value      = trip.clientRut     || '';
+  document.getElementById('clientPhone').value    = trip.clientPhone   || '';
+  document.getElementById('clientEmail').value    = trip.clientEmail   || '';
+  document.getElementById('tripType').value       = trip.tripType      || '';
+  document.getElementById('passengers').value     = trip.passengers    || '';
+  document.getElementById('departureDate').value  = trip.departureDate || '';
+  document.getElementById('returnDate').value     = trip.returnDate    || '';
+  document.getElementById('origin').value         = trip.origin        || '';
+  document.getElementById('destination').value    = trip.destination   || '';
+  document.getElementById('driver').value         = trip.driver        || '';
+  document.getElementById('vehicle').value        = trip.vehicle       || '';
+  document.getElementById('cost').value           = trip.cost          || '';
+  document.getElementById('paymentStatus').value  = trip.paymentStatus || 'Pendiente';
+  document.getElementById('paymentMethod').value  = trip.paymentMethod || '';
+  document.getElementById('tripStatus').value     = trip.tripStatus    || 'Pendiente';
+  document.getElementById('observations').value   = trip.observations  || '';
+  document.getElementById('internalNotes').value  = trip.internalNotes || '';
 }
 
 document.getElementById('tripForm').addEventListener('submit', e => {
@@ -229,27 +346,27 @@ document.getElementById('tripForm').addEventListener('submit', e => {
 
   const id = document.getElementById('tripId').value;
   const tripData = {
-    id:             id ? Number(id) : nextId(),
-    clientName:     document.getElementById('clientName').value.trim(),
-    clientRut:      document.getElementById('clientRut').value.trim(),
-    clientPhone:    document.getElementById('clientPhone').value.trim(),
-    clientEmail:    document.getElementById('clientEmail').value.trim(),
-    tripType:       document.getElementById('tripType').value,
-    passengers:     document.getElementById('passengers').value,
-    departureDate:  document.getElementById('departureDate').value,
-    returnDate:     document.getElementById('returnDate').value,
-    origin:         document.getElementById('origin').value.trim(),
-    destination:    document.getElementById('destination').value.trim(),
-    driver:         document.getElementById('driver').value.trim(),
-    vehicle:        document.getElementById('vehicle').value.trim(),
-    cost:           Number(document.getElementById('cost').value) || 0,
-    paymentStatus:  document.getElementById('paymentStatus').value,
-    paymentMethod:  document.getElementById('paymentMethod').value,
-    tripStatus:     document.getElementById('tripStatus').value,
-    observations:   document.getElementById('observations').value.trim(),
-    internalNotes:  document.getElementById('internalNotes').value.trim(),
-    createdAt:      id ? (trips.find(t => t.id === Number(id))?.createdAt || new Date().toISOString()) : new Date().toISOString(),
-    updatedAt:      new Date().toISOString(),
+    id:            id ? Number(id) : nextId(),
+    clientName:    document.getElementById('clientName').value.trim(),
+    clientRut:     document.getElementById('clientRut').value.trim(),
+    clientPhone:   document.getElementById('clientPhone').value.trim(),
+    clientEmail:   document.getElementById('clientEmail').value.trim(),
+    tripType:      document.getElementById('tripType').value,
+    passengers:    document.getElementById('passengers').value,
+    departureDate: document.getElementById('departureDate').value,
+    returnDate:    document.getElementById('returnDate').value,
+    origin:        document.getElementById('origin').value.trim(),
+    destination:   document.getElementById('destination').value.trim(),
+    driver:        document.getElementById('driver').value.trim(),
+    vehicle:       document.getElementById('vehicle').value.trim(),
+    cost:          Number(document.getElementById('cost').value) || 0,
+    paymentStatus: document.getElementById('paymentStatus').value,
+    paymentMethod: document.getElementById('paymentMethod').value,
+    tripStatus:    document.getElementById('tripStatus').value,
+    observations:  document.getElementById('observations').value.trim(),
+    internalNotes: document.getElementById('internalNotes').value.trim(),
+    createdAt:     id ? (trips.find(t => t.id === Number(id))?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt:     new Date().toISOString(),
   };
 
   if (id) {
@@ -285,13 +402,15 @@ function editTrip(id) {
   closeModal();
 }
 
-// ── DETAIL MODAL ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// MODAL DETALLE
+// ══════════════════════════════════════════════════════════════════════════════
+
 function openDetail(id) {
   const t = trips.find(t => t.id === id);
   if (!t) return;
 
   document.getElementById('modalTitle').textContent = `Viaje #${t.id} — ${t.clientName}`;
-
   document.getElementById('modalBody').innerHTML = `
     <div class="detail-grid">
       <div>
@@ -342,7 +461,10 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 });
 
-// ── DELETE ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// ELIMINAR
+// ══════════════════════════════════════════════════════════════════════════════
+
 function confirmDelete(id) {
   deleteTargetId = id;
   document.getElementById('confirmOverlay').classList.add('open');
@@ -361,11 +483,14 @@ document.getElementById('confirmDelete').addEventListener('click', () => {
     deleteTargetId = null;
   }
   document.getElementById('confirmOverlay').classList.remove('open');
-  if (currentView === 'records') renderRecords();
-  if (currentView === 'dashboard') renderDashboard();
+  if (currentView === 'records')    renderRecords();
+  if (currentView === 'dashboard')  renderDashboard();
 });
 
-// ── CALENDAR ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// CALENDARIO
+// ══════════════════════════════════════════════════════════════════════════════
+
 function renderCalendar() {
   const year  = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
@@ -374,12 +499,11 @@ function renderCalendar() {
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   document.getElementById('calMonthTitle').textContent = `${monthNames[month]} ${year}`;
 
-  const firstDay = new Date(year, month, 1).getDay();
+  const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const offset = (firstDay + 6) % 7; // Monday start
+  const offset      = (firstDay + 6) % 7;
 
   const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-
   let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
 
   for (let i = 0; i < offset; i++) html += '<div class="cal-day cal-empty"></div>';
@@ -409,7 +533,10 @@ document.getElementById('calNext').addEventListener('click', () => {
   renderCalendar();
 });
 
-// ── EXPORT CSV ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPORTAR CSV
+// ══════════════════════════════════════════════════════════════════════════════
+
 document.getElementById('exportBtn').addEventListener('click', () => {
   if (!trips.length) { showToast('No hay registros para exportar', 'error'); return; }
 
@@ -425,18 +552,21 @@ document.getElementById('exportBtn').addEventListener('click', () => {
     t.createdAt ? formatDate(t.createdAt) : ''
   ].map(v => `"${String(v||'').replace(/"/g,'""')}"`));
 
-  const csv = '﻿' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const csv  = '﻿' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `transcontrol_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `transportesravel_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('CSV exportado correctamente', 'success');
 });
 
-// ── HELPERS ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -460,17 +590,17 @@ function paymentBadge(status) {
 function showToast(msg, type = 'info') {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
-  toast.className = `toast ${type} show`;
+  toast.className   = `toast ${type} show`;
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ── DASHBOARD LINK ──────────────────────────────────────────────────────────
-document.querySelectorAll('[data-view]').forEach(el => {
+// Dashboard shortcut links (e.g. "Ver todos" — nav items have their own listeners)
+document.querySelectorAll('[data-view]:not(.nav-item)').forEach(el => {
   el.addEventListener('click', e => {
     e.preventDefault();
     showView(el.dataset.view);
   });
 });
 
-// ── INIT ────────────────────────────────────────────────────────────────────
-showView('dashboard');
+// ── INIT ──────────────────────────────────────────────────────────────────────
+showClientForm();
