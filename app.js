@@ -1,20 +1,40 @@
 'use strict';
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const ADMIN_PIN    = '1234';
-const STORAGE_KEY  = 'transportesravel_trips';
+const ADMIN_PIN = '1234';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyCgUAblhX56Hxp92cUbDYGcp0h55cA4fZQ',
+  authDomain:        'transportesravel2026.firebaseapp.com',
+  projectId:         'transportesravel2026',
+  storageBucket:     'transportesravel2026.firebasestorage.app',
+  messagingSenderId: '295541915149',
+  appId:             '1:295541915149:web:6e88a172e5b4f455e6df44'
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let trips         = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let currentView   = 'dashboard';
-let editingId     = null;
+let trips          = [];
+let currentView    = 'dashboard';
+let editingId      = null;
 let deleteTargetId = null;
-let calendarDate  = new Date();
+let calendarDate   = new Date();
 
-// ── PERSISTENCE ───────────────────────────────────────────────────────────────
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
-}
+// ── FIRESTORE SYNC ────────────────────────────────────────────────────────────
+db.collection('trips').onSnapshot(snapshot => {
+  trips = snapshot.docs.map(d => d.data()).sort((a, b) => a.id - b.id);
+  document.getElementById('recordCount').textContent =
+    trips.length + ' registro' + (trips.length !== 1 ? 's' : '');
+  if (document.body.classList.contains('admin-mode')) {
+    if      (currentView === 'dashboard') renderDashboard();
+    else if (currentView === 'records')   renderRecords();
+    else if (currentView === 'calendar')  renderCalendar();
+  }
+}, () => showToast('Error al conectar con la base de datos', 'error'));
+
+function save() {}
 
 function nextId() {
   return trips.reduce((max, t) => t.id > max ? t.id : max, 0) + 1;
@@ -61,9 +81,9 @@ document.getElementById('clientForm').addEventListener('submit', e => {
     updatedAt:        new Date().toISOString(),
   };
 
-  trips.push(trip);
-  save();
-  showClientSuccess();
+  db.collection('trips').doc(String(trip.id)).set(trip)
+    .then(() => showClientSuccess())
+    .catch(() => showToast('Error al enviar la solicitud', 'error'));
 });
 
 function showClientSuccess() {
@@ -369,16 +389,10 @@ document.getElementById('tripForm').addEventListener('submit', e => {
     updatedAt:     new Date().toISOString(),
   };
 
-  if (id) {
-    const idx = trips.findIndex(t => t.id === Number(id));
-    if (idx !== -1) trips[idx] = tripData;
-    showToast('Viaje actualizado correctamente', 'success');
-  } else {
-    trips.push(tripData);
-    showToast('Viaje registrado correctamente', 'success');
-  }
+  db.collection('trips').doc(String(tripData.id)).set(tripData)
+    .then(() => showToast(id ? 'Viaje actualizado correctamente' : 'Viaje registrado correctamente', 'success'))
+    .catch(() => showToast('Error al guardar el viaje', 'error'));
 
-  save();
   editingId = null;
   showView('records');
 });
@@ -477,14 +491,12 @@ document.getElementById('confirmCancel').addEventListener('click', () => {
 
 document.getElementById('confirmDelete').addEventListener('click', () => {
   if (deleteTargetId !== null) {
-    trips = trips.filter(t => t.id !== deleteTargetId);
-    save();
+    db.collection('trips').doc(String(deleteTargetId)).delete()
+      .catch(() => showToast('Error al eliminar el registro', 'error'));
     showToast('Registro eliminado', 'info');
     deleteTargetId = null;
   }
   document.getElementById('confirmOverlay').classList.remove('open');
-  if (currentView === 'records')    renderRecords();
-  if (currentView === 'dashboard')  renderDashboard();
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
