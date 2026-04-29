@@ -3,6 +3,13 @@
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const ADMIN_PIN = '1234';
 
+// EmailJS — reemplaza estos valores con los tuyos
+const EMAILJS_PUBLIC_KEY  = 'x9B031X2tsq-uzKaN';
+const EMAILJS_SERVICE_ID  = 'TransportesRavel';               // tu Service ID
+const EMAILJS_TEMPLATE_ID = 'template_rmowjnt';
+
+emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
 const firebaseConfig = {
   apiKey:            'AIzaSyCgUAblhX56Hxp92cUbDYGcp0h55cA4fZQ',
   authDomain:        'transportesravel2026.firebaseapp.com',
@@ -58,6 +65,8 @@ document.getElementById('clientForm').addEventListener('submit', e => {
     passengers:       document.getElementById('cf_passengers').value,
     serviceStartDate: document.getElementById('cf_startDate').value,
     serviceEndDate:   document.getElementById('cf_endDate').value,
+    departureDate:    document.getElementById('cf_startDate').value,
+    returnDate:       document.getElementById('cf_endDate').value,
     origin:           document.getElementById('cf_origin').value.trim(),
     destination:      document.getElementById('cf_destination').value.trim(),
     departureTime:    document.getElementById('cf_departureTime').value,
@@ -82,7 +91,10 @@ document.getElementById('clientForm').addEventListener('submit', e => {
   };
 
   db.collection('trips').doc(String(trip.id)).set(trip)
-    .then(() => showClientSuccess())
+    .then(() => {
+      sendNotificationEmail(trip);
+      showClientSuccess();
+    })
     .catch(() => showToast('Error al enviar la solicitud', 'error'));
 });
 
@@ -98,6 +110,34 @@ function showClientForm() {
 }
 
 document.getElementById('newRequestBtn').addEventListener('click', showClientForm);
+
+function sendNotificationEmail(trip) {
+  const fmt = v => v || '—';
+  const fmtMoney = v => v ? '$' + Number(v).toLocaleString('es-CO') : '—';
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    service_id:          String(trip.id),
+    created_at:          new Date(trip.createdAt).toLocaleString('es-CO'),
+    client_name:         fmt(trip.clientName),
+    client_phone:        fmt(trip.clientPhone),
+    client_email:        fmt(trip.clientEmail),
+    origin:              fmt(trip.origin),
+    destination:         fmt(trip.destination),
+    start_date:          fmt(trip.serviceStartDate),
+    end_date:            fmt(trip.serviceEndDate),
+    departure_time:      fmt(trip.departureTime),
+    return_time:         fmt(trip.returnTime),
+    passengers:          fmt(trip.passengers),
+    observations:        fmt(trip.observations),
+    invoice_date:        fmt(trip.invoiceDate),
+    service_value:       fmtMoney(trip.cost),
+    transporter_value:   fmtMoney(trip.transporterValue),
+    invoice_detail:      fmt(trip.invoiceDetail),
+    payment_method:      fmt(trip.paymentMethod),
+    due_date:            fmt(trip.dueDate),
+    invoice_email:       fmt(trip.invoiceEmail),
+    support_docs:        fmt(trip.supportDocs),
+  }).catch(() => {});
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ACCESO ADMIN — PIN
