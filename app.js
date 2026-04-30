@@ -662,5 +662,19 @@ document.querySelectorAll('[data-view]:not(.nav-item)').forEach(el => {
   });
 });
 
+// ── AUTO-CAPITALIZAR NOMBRES Y CIUDADES ───────────────────────────────────────
+['cf_name','cf_origin','cf_destination','clientName','origin','destination','driver'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const pos = el.selectionStart;
+    const val = el.value.replace(/(?:^|[\s\-\/])\S/g, c => c.toUpperCase());
+    if (el.value !== val) {
+      el.value = val;
+      el.setSelectionRange(pos, pos);
+    }
+  });
+});
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 showClientForm();
