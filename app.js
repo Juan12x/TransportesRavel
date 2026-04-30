@@ -3,10 +3,15 @@
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const ADMIN_PIN = '1234';
 
-// EmailJS — reemplaza estos valores con los tuyos
 const EMAILJS_PUBLIC_KEY  = 'x9B031X2tsq-uzKaN';
-const EMAILJS_SERVICE_ID  = 'TransportesRavel';               // tu Service ID
+const EMAILJS_SERVICE_ID  = 'TransportesRavel';
 const EMAILJS_TEMPLATE_ID = 'template_rmowjnt';
+
+// Correos que reciben la notificación de nuevo servicio
+const NOTIFICATION_EMAILS = [
+  'juanbaena553@gmail.com',
+  'Gerencia@transravel.com',
+];
 
 emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 
@@ -114,7 +119,7 @@ document.getElementById('newRequestBtn').addEventListener('click', showClientFor
 function sendNotificationEmail(trip) {
   const fmt = v => v || '—';
   const fmtMoney = v => v ? '$' + Number(v).toLocaleString('es-CO') : '—';
-  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+  const params = {
     service_id:          String(trip.id),
     created_at:          new Date(trip.createdAt).toLocaleString('es-CO'),
     client_name:         fmt(trip.clientName),
@@ -136,7 +141,10 @@ function sendNotificationEmail(trip) {
     due_date:            fmt(trip.dueDate),
     invoice_email:       fmt(trip.invoiceEmail),
     support_docs:        fmt(trip.supportDocs),
-  }).catch(() => {});
+  };
+  NOTIFICATION_EMAILS.forEach(to => {
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { ...params, to_email: to }).catch(() => {});
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
