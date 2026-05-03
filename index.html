@@ -34,7 +34,84 @@
 
       <form id="clientForm" class="client-form">
 
-        <!-- SECCIÓN 1: DATOS DEL CLIENTE Y FACTURACIÓN -->
+        <!-- SECCIÓN 1: INFORMACIÓN COMERCIAL -->
+        <div class="cf-section">
+          <div class="cf-section-title">Información Comercial</div>
+
+          <div class="cf-row cf-full">
+            <div class="form-group">
+              <label for="cf_submitterEmail">Correo Electrónico <span class="required">*</span></label>
+              <input type="email" id="cf_submitterEmail" placeholder="tucorreo@empresa.com" required />
+            </div>
+          </div>
+
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_comercial">Comercial <span class="required">*</span></label>
+              <select id="cf_comercial" required>
+                <option value="">Seleccionar comercial...</option>
+                <!-- Completar con la lista real de comerciales -->
+                <option value="Por asignar">Por asignar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Servicio <span class="required">*</span></label>
+              <div class="cf-radio-group">
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_serviceType" value="Turismo" required />
+                  Turismo
+                </label>
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_serviceType" value="Empresarial" />
+                  Empresarial
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_costCenter">Centro de Costos <span class="required">*</span></label>
+              <select id="cf_costCenter" required>
+                <option value="">Seleccionar empresa...</option>
+                <!-- Completar con la lista real de empresas -->
+                <option value="Por asignar">Por asignar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cf_purchaseOrder">Orden de Compra / Solicitud de Servicio <span class="required">*</span></label>
+              <input type="text" id="cf_purchaseOrder" placeholder="Número de orden o N/A" required />
+              <span class="field-hint">En caso de que no aplique, escribir N/A</span>
+            </div>
+          </div>
+
+          <div class="cf-row">
+            <div class="form-group">
+              <label for="cf_clientNit">NIT o Cédula Cliente <span class="required">*</span></label>
+              <input type="text" id="cf_clientNit" placeholder="Ej: 900.123.456-7" required />
+            </div>
+            <div class="form-group">
+              <label for="cf_clientFullName">Nombre del Cliente (como aparece en el RUT) <span class="required">*</span></label>
+              <input type="text" id="cf_clientFullName" placeholder="Razón social o nombre completo" autocapitalize="words" required />
+            </div>
+          </div>
+
+          <div class="cf-row cf-full">
+            <div class="form-group">
+              <label for="cf_entryChannel">Por Donde Ingresó el Servicio <span class="required">*</span></label>
+              <select id="cf_entryChannel" required>
+                <option value="">Seleccionar...</option>
+                <option value="Whatsapp Directo">Whatsapp Directo</option>
+                <option value="Pauta">Pauta</option>
+                <option value="Referido">Referido</option>
+                <option value="Cliente Antiguo">Cliente Antiguo</option>
+                <option value="Gestión Comercial">Gestión Comercial</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: DATOS DEL CLIENTE Y FACTURACIÓN -->
         <div class="cf-section">
           <div class="cf-section-title">Datos del Cliente y Facturación</div>
           <div class="cf-row">
@@ -43,23 +120,23 @@
               <input type="text" id="cf_name" placeholder="Nombre completo" autocapitalize="words" required />
             </div>
             <div class="form-group">
-              <label for="cf_phone">Teléfono Contacto <span class="required">*</span></label>
+              <label for="cf_phone">Teléfono del Contacto <span class="required">*</span></label>
               <input type="tel" id="cf_phone" placeholder="+57 300 000 0000" required />
             </div>
           </div>
           <div class="cf-row">
             <div class="form-group">
-              <label for="cf_email">Correo Electrónico del Cliente <span class="required">*</span></label>
-              <input type="email" id="cf_email" placeholder="correo@empresa.com" required />
+              <label for="cf_clientEmail">Correo Electrónico del Cliente <span class="required">*</span></label>
+              <input type="email" id="cf_clientEmail" placeholder="correo@empresa.com" required />
             </div>
             <div class="form-group">
-              <label for="cf_invoiceDate">Fecha Emisión Factura <span class="required">*</span></label>
+              <label for="cf_invoiceDate">Fecha Emisión Factura (DD/MM/AAAA) <span class="required">*</span></label>
               <input type="date" id="cf_invoiceDate" required />
             </div>
           </div>
         </div>
 
-        <!-- SECCIÓN 2: DATOS DEL SERVICIO -->
+        <!-- SECCIÓN 3: DATOS DEL SERVICIO -->
         <div class="cf-section">
           <div class="cf-section-title">Datos del Servicio</div>
           <div class="cf-row">
@@ -106,7 +183,7 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 3: DATOS CONTABLES -->
+        <!-- SECCIÓN 4: DATOS CONTABLES -->
         <div class="cf-section">
           <div class="cf-section-title">Datos Contables</div>
           <div class="cf-row">
@@ -123,13 +200,13 @@
                 <span>$</span>
                 <input type="number" id="cf_transporterValue" min="0" step="1000" placeholder="0" required />
               </div>
-              <span class="field-hint">Mínimo 20% de utilidad</span>
+              <span class="field-hint">Recuerde trabajar mínimo con el 20% de utilidad</span>
             </div>
           </div>
           <div class="cf-row cf-full">
             <div class="form-group">
               <label for="cf_invoiceDetail">Detalle para la Factura <span class="required">*</span></label>
-              <textarea id="cf_invoiceDetail" rows="2" placeholder="Ej: SERVICIO DE TRANSPORTE 12/02/2026 MEDELLÍN - ÁREA METROPOLITANA. Si lleva orden de compra o se factura después de aprobación del cliente, indicarlo aquí." required></textarea>
+              <textarea id="cf_invoiceDetail" rows="3" placeholder="Ej: SERVICIO DE TRANSPORTE 12/02/2026 MEDELLÍN - ÁREA METROPOLITANA&#10;Si lleva orden de compra o se factura después de aprobación del cliente, indicarlo aquí." required></textarea>
             </div>
           </div>
           <div class="cf-row">
@@ -149,22 +226,31 @@
             <div class="form-group">
               <label for="cf_dueDate">Fecha de Vencimiento <span class="required">*</span></label>
               <input type="date" id="cf_dueDate" required />
-              <span class="field-hint">Ocasional: 1 día antes del servicio. Crédito: según días autorizados desde factura.</span>
+              <span class="field-hint">Ocasional: 1 día antes del servicio. Crédito: según días autorizados desde la fecha de factura.</span>
             </div>
           </div>
-          <div class="cf-row">
+          <div class="cf-row cf-full">
             <div class="form-group">
               <label for="cf_invoiceEmail">Correo para Facturación Electrónica <span class="required">*</span></label>
               <input type="email" id="cf_invoiceEmail" placeholder="facturacion@empresa.com" required />
             </div>
+          </div>
+          <div class="cf-row cf-full">
             <div class="form-group">
-              <label for="cf_supportDocs">Documentos Soporte</label>
-              <input type="text" id="cf_supportDocs" placeholder="Cédula, RUT, Contrato (solo cliente nuevo)" />
+              <label>Documentos Soporte — Solo si el cliente es nuevo (Cédula, RUT, Contrato)</label>
+              <div class="file-upload-box">
+                <input type="file" id="cf_supportDocs" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="file-input-hidden" />
+                <label for="cf_supportDocs" class="file-upload-label">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="cf_supportDocsName">Seleccionar archivo (PDF, imagen, Word)</span>
+                </label>
+              </div>
+              <span class="field-hint">El documento se guardará en la base de datos junto al servicio.</span>
             </div>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary cf-submit">
+        <button type="submit" class="btn btn-primary cf-submit" id="cf_submitBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
           Enviar Solicitud
         </button>
@@ -285,7 +371,7 @@
         </div>
         <div class="card">
           <div class="filters-bar">
-            <input type="text" id="searchInput" placeholder="Buscar por cliente, origen, destino..." class="search-input" />
+            <input type="text" id="searchInput" placeholder="Buscar por cliente, #ID, origen, destino..." class="search-input" />
             <select id="filterStatus" class="filter-select">
               <option value="">Todos los estados</option>
               <option value="Pendiente">Pendiente</option>
@@ -581,6 +667,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="app.js"></script>
 </body>

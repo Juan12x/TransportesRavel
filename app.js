@@ -25,7 +25,8 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db      = firebase.firestore();
+const storage = firebase.storage();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let trips          = [];
@@ -56,16 +57,54 @@ function nextId() {
 // VISTA CLIENTE
 // ══════════════════════════════════════════════════════════════════════════════
 
-document.getElementById('clientForm').addEventListener('submit', e => {
+document.getElementById('cf_supportDocs').addEventListener('change', function () {
+  const name = this.files[0] ? this.files[0].name : 'Seleccionar archivo (PDF, imagen, Word)';
+  document.getElementById('cf_supportDocsName').textContent = name;
+});
+
+document.getElementById('clientForm').addEventListener('submit', async e => {
   e.preventDefault();
 
+  const btn = document.getElementById('cf_submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Enviando...';
+
   const paymentMethodEl = document.querySelector('input[name="cf_paymentMethod"]:checked');
+  const serviceTypeEl   = document.querySelector('input[name="cf_serviceType"]:checked');
+  const fileInput       = document.getElementById('cf_supportDocs');
+  const file            = fileInput.files[0];
+  const tripId          = nextId();
+
+  let supportDocUrl  = '';
+  let supportDocName = '';
+
+  if (file) {
+    try {
+      const ref = storage.ref(`documentos-soporte/${tripId}/${file.name}`);
+      await ref.put(file);
+      supportDocUrl  = await ref.getDownloadURL();
+      supportDocName = file.name;
+    } catch {
+      showToast('Error al subir el documento. Intenta de nuevo.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg> Enviar Solicitud';
+      return;
+    }
+  }
 
   const trip = {
-    id:               nextId(),
+    id:               tripId,
+    submitterEmail:   document.getElementById('cf_submitterEmail').value.trim(),
+    comercial:        document.getElementById('cf_comercial').value,
+    serviceType:      serviceTypeEl ? serviceTypeEl.value : '',
+    costCenter:       document.getElementById('cf_costCenter').value,
+    purchaseOrder:    document.getElementById('cf_purchaseOrder').value.trim(),
+    clientNit:        document.getElementById('cf_clientNit').value.trim(),
+    clientFullName:   document.getElementById('cf_clientFullName').value.trim(),
+    entryChannel:     document.getElementById('cf_entryChannel').value,
     clientName:       document.getElementById('cf_name').value.trim(),
     clientPhone:      document.getElementById('cf_phone').value.trim(),
-    clientEmail:      document.getElementById('cf_email').value.trim(),
+    clientEmail:      document.getElementById('cf_clientEmail').value.trim(),
     invoiceDate:      document.getElementById('cf_invoiceDate').value,
     passengers:       document.getElementById('cf_passengers').value,
     serviceStartDate: document.getElementById('cf_startDate').value,
@@ -83,7 +122,8 @@ document.getElementById('clientForm').addEventListener('submit', e => {
     paymentMethod:    paymentMethodEl ? paymentMethodEl.value : '',
     dueDate:          document.getElementById('cf_dueDate').value,
     invoiceEmail:     document.getElementById('cf_invoiceEmail').value.trim(),
-    supportDocs:      document.getElementById('cf_supportDocs').value.trim(),
+    supportDocUrl,
+    supportDocName,
     driver:           '',
     vehicle:          '',
     clientRut:        '',
@@ -100,7 +140,11 @@ document.getElementById('clientForm').addEventListener('submit', e => {
       sendNotificationEmail(trip);
       showClientSuccess();
     })
-    .catch(() => showToast('Error al enviar la solicitud', 'error'));
+    .catch(() => showToast('Error al enviar la solicitud', 'error'))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg> Enviar Solicitud';
+    });
 });
 
 function showClientSuccess() {
@@ -360,7 +404,7 @@ function filterRecords() {
   const payment = document.getElementById('filterPayment').value;
 
   const filtered = trips.filter(t => {
-    const matchSearch  = !search || [t.clientName, t.origin, t.destination, t.clientRut, t.clientPhone]
+    const matchSearch  = !search || [t.clientName, t.origin, t.destination, t.clientRut, t.clientPhone, t.clientFullName, t.clientNit, String(t.id)]
       .some(v => (v||'').toLowerCase().includes(search));
     const matchStatus  = !status  || t.tripStatus === status;
     const matchPayment = !payment || t.paymentStatus === payment;
@@ -663,7 +707,7 @@ document.querySelectorAll('[data-view]:not(.nav-item)').forEach(el => {
 });
 
 // ── AUTO-CAPITALIZAR NOMBRES Y CIUDADES ───────────────────────────────────────
-['cf_name','cf_origin','cf_destination','clientName','origin','destination','driver'].forEach(id => {
+['cf_name','cf_origin','cf_destination','cf_clientFullName','clientName','origin','destination','driver'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input', () => {

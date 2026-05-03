@@ -881,3 +881,32 @@ body.admin-mode #main    { display: flex  !important; flex-direction: column; fl
   .stats-grid { grid-template-columns: 1fr; }
   .topbar-actions { display: none; }
 }
+
+/* ===== FILE UPLOAD ===== */
+.file-input-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+.file-upload-box { margin-top: 4px; }
+.file-upload-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--gray-500);
+  font-size: 13.5px;
+  transition: border-color .15s, background .15s;
+  background: var(--gray-50);
+}
+.file-upload-label:hover {
+  border-color: var(--blue-500);
+  background: var(--blue-50);
+  color: var(--blue-600);
+}
+.file-upload-label svg { flex-shrink: 0; }
