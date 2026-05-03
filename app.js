@@ -116,8 +116,8 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
     departureTime:    document.getElementById('cf_departureTime').value,
     returnTime:       document.getElementById('cf_returnTime').value,
     observations:     document.getElementById('cf_observations').value.trim(),
-    cost:             Number(document.getElementById('cf_serviceValue').value) || 0,
-    transporterValue: Number(document.getElementById('cf_transporterValue').value) || 0,
+    cost:             parsePrecio('cf_serviceValue'),
+    transporterValue: parsePrecio('cf_transporterValue'),
     invoiceDetail:    document.getElementById('cf_invoiceDetail').value.trim(),
     paymentMethod:    paymentMethodEl ? paymentMethodEl.value : '',
     dueDate:          document.getElementById('cf_dueDate').value,
@@ -304,10 +304,17 @@ function renderDashboard() {
 }
 
 function renderUpcoming() {
-  const now = new Date();
+  const today = new Date().toISOString().slice(0, 10);
   const upcoming = trips
-    .filter(t => t.departureDate && new Date(t.departureDate) >= now && t.tripStatus !== 'Cancelado' && t.tripStatus !== 'Completado')
-    .sort((a, b) => new Date(a.departureDate) - new Date(b.departureDate))
+    .filter(t => {
+      const d = (t.departureDate || t.serviceStartDate || '').slice(0, 10);
+      return d >= today && t.tripStatus !== 'Cancelado' && t.tripStatus !== 'Completado';
+    })
+    .sort((a, b) => {
+      const da = (a.departureDate || a.serviceStartDate || '').slice(0, 10);
+      const db = (b.departureDate || b.serviceStartDate || '').slice(0, 10);
+      return da.localeCompare(db);
+    })
     .slice(0, 5);
 
   const el = document.getElementById('upcomingList');
@@ -318,7 +325,7 @@ function renderUpcoming() {
 
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   el.innerHTML = upcoming.map(t => {
-    const d = new Date(t.departureDate);
+    const d = new Date((t.departureDate || t.serviceStartDate) + 'T12:00:00');
     return `
       <div class="upcoming-item" onclick="openDetail(${t.id})">
         <div class="upcoming-date">
@@ -471,7 +478,7 @@ document.getElementById('tripForm').addEventListener('submit', e => {
     destination:   document.getElementById('destination').value.trim(),
     driver:        document.getElementById('driver').value.trim(),
     vehicle:       document.getElementById('vehicle').value.trim(),
-    cost:          Number(document.getElementById('cost').value) || 0,
+    cost:          parsePrecio('cost'),
     paymentStatus: document.getElementById('paymentStatus').value,
     paymentMethod: document.getElementById('paymentMethod').value,
     tripStatus:    document.getElementById('tripStatus').value,
@@ -703,6 +710,25 @@ document.querySelectorAll('[data-view]:not(.nav-item)').forEach(el => {
   el.addEventListener('click', e => {
     e.preventDefault();
     showView(el.dataset.view);
+  });
+});
+
+// ── FORMATO DE PRECIOS ────────────────────────────────────────────────────────
+function parsePrecio(id) {
+  return Number((document.getElementById(id).value || '0').replace(/\./g, '')) || 0;
+}
+
+['cf_serviceValue', 'cf_transporterValue', 'cost'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const pos   = el.selectionStart;
+    const dotsB = (el.value.slice(0, pos).match(/\./g) || []).length;
+    const raw   = el.value.replace(/\D/g, '');
+    const fmt   = raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value    = fmt;
+    const dotsA = (fmt.slice(0, pos).match(/\./g) || []).length;
+    el.setSelectionRange(pos + (dotsA - dotsB), pos + (dotsA - dotsB));
   });
 });
 
