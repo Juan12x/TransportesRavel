@@ -29,11 +29,11 @@
   <p>Carga masiva de la base de datos de centros de costos de Transportes Ravel.</p>
 
   <div class="steps">
-    <strong>Formato esperado (columnas separadas por Tab):</strong><br/>
-    <code>Código &nbsp; NIT &nbsp; Nombre empresa</code><br/><br/>
+    <strong>Formato esperado (4 columnas separadas por Tab):</strong><br/>
+    <code>Código &nbsp; Identificación tercero &nbsp; Nombre subcentro &nbsp; Centro de Costos</code><br/><br/>
     Ejemplo:<br/>
-    <code>CIAL - 001 &nbsp;&nbsp; &nbsp;&nbsp; TTEM CCIAL VTA</code><br/>
-    <code>CIAL - 002 &nbsp; 901231929 &nbsp; TTES2 REGIO EMILIA</code><br/><br/>
+    <code>CIAL - 001 &nbsp;&nbsp; &nbsp;&nbsp; TTEM CCIAL VTA &nbsp; CIAL - 001 TTEM CCIAL VTA</code><br/>
+    <code>CIAL - 002 &nbsp; 901231929 &nbsp; TTES2 REGIO EMILIA &nbsp; CIAL - 002 TTES2 REGIO EMILIA</code><br/><br/>
     1. Abre el Excel y selecciona <strong>todas las filas de datos</strong> (sin encabezado)<br/>
     2. Copia con <strong>Ctrl+C</strong><br/>
     3. Pega aquí con <strong>Ctrl+V</strong><br/>
@@ -97,13 +97,15 @@
       // Soporta 2 columnas (código, nombre) o 3 columnas (código, nit, nombre)
       const nit    = fila.length >= 3 ? fila[1].replace(/[.\-\s]/g, '') : '';
       const nombre = (fila.length >= 3 ? fila[2] : fila[1]) || '';
-      const label  = `${codigo} ${nombre}`.trim();
 
       if (!codigo || !nombre) {
         log(`⚠ Fila ${i+1} incompleta, se omite.`, 'err');
         err++;
         continue;
       }
+
+      // Si hay 4 columnas, la 4ª es el label "CENTRO DE COSTOS" oficial
+      const label = fila.length >= 4 ? fila[3] : `${codigo} ${nombre}`.trim();
 
       const docId = codigo.replace(/\s/g, '_');
       const ref   = db.collection('centrosCostos').doc(docId);
