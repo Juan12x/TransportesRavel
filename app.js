@@ -154,7 +154,7 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
 
   const trip = {
     id:               tripId,
-    submitterEmail:   document.getElementById('cf_submitterEmail').value.trim(),
+    submitterEmail:   document.getElementById('cf_submitterEmail')?.value.trim() || '',
     comercial:        document.getElementById('cf_comercial').value,
     serviceType:      serviceTypeEl ? serviceTypeEl.value : '',
     costCenter:       document.getElementById('cf_costCenter').value,
