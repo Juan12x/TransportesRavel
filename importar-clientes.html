@@ -28,14 +28,15 @@
   <p>Carga masiva de la base de datos de clientes de Transportes Ravel.</p>
 
   <div class="steps">
-    <strong>Pasos:</strong><br/>
-    1. Abre tu Excel y selecciona <strong>todas las filas de datos</strong> (sin la fila de encabezado)<br/>
+    <strong>Formato esperado (2 columnas separadas por Tab):</strong><br/>
+    <strong>NIT &nbsp;|&nbsp; Nombre del cliente</strong><br/><br/>
+    1. Abre tu Excel y selecciona <strong>todas las filas de datos</strong> (sin encabezado)<br/>
     2. Copia con <strong>Ctrl+C</strong><br/>
     3. Pega aquí abajo con <strong>Ctrl+V</strong><br/>
     4. Clic en <strong>Importar</strong>
   </div>
 
-  <textarea id="data" placeholder="Pega aquí los datos copiados del Excel...&#10;&#10;Ejemplo:&#10;IBEROMODA SAS	NIT	900207065&#10;COFFEE STYLERS INVERSIONES SASA	NIT	901665053&#10;2C GROUP SAS	NIT	901524213"></textarea>
+  <textarea id="data" placeholder="Pega aquí los datos copiados del Excel...&#10;&#10;Ejemplo:&#10;900207065	IBEROMODA SAS&#10;901665053	COFFEE STYLERS INVERSIONES SAS&#10;901524213	2C GROUP SAS"></textarea>
 
   <div class="btns">
     <button class="btn-primary" id="importBtn" onclick="importar()">Importar Clientes</button>
@@ -80,15 +81,16 @@
     log(`📂 ${filas.length} filas encontradas...`);
 
     let ok = 0, err = 0;
-    const batch = db.batch();
+    let batch = db.batch();
+    let batchCount = 0;
     const MAX_BATCH = 400;
 
     for (let i = 0; i < filas.length; i++) {
       const fila  = filas[i];
-      const nombre = fila[0] || '';
-      // Acepta formato de 2 columnas (nombre, id) o 3 columnas (nombre, tipo, id)
-      const tipoId = fila.length >= 3 ? fila[1] : 'NIT';
-      const identificacion = (fila.length >= 3 ? fila[2] : fila[1]).replace(/[.\-\s]/g, '');
+      // Formato: NIT | Nombre
+      const identificacion = fila[0].replace(/[.\-\s]/g, '');
+      const nombre         = fila[1] || '';
+      const tipoId         = 'NIT';
 
       if (!nombre || !identificacion) {
         log(`⚠ Fila ${i+1} incompleta, se omite.`, 'err');
@@ -96,8 +98,7 @@
         continue;
       }
 
-      const docId = identificacion;
-      const ref   = db.collection('clientes').doc(docId);
+      const ref = db.collection('clientes').doc(identificacion);
       batch.set(ref, {
         nombre,
         tipoId,
@@ -114,20 +115,33 @@
       }, { merge: true });
 
       ok++;
+      batchCount++;
 
-      // Firestore permite max 500 por batch — commit cada 400
-      if (ok % MAX_BATCH === 0) {
-        await batch.commit();
-        log(`✅ ${ok} clientes guardados...`, 'ok');
+      // Commit cada 400 y crear un batch nuevo
+      if (batchCount === MAX_BATCH) {
+        try {
+          await batch.commit();
+          log(`✅ ${ok} clientes guardados...`, 'ok');
+        } catch(e) {
+          log(`❌ Error en lote ${ok}: ${e.message}`, 'err');
+        }
+        batch = db.batch();
+        batchCount = 0;
       }
     }
 
-    try {
-      await batch.commit();
+    // Commit del lote final (los que quedan)
+    if (batchCount > 0) {
+      try {
+        await batch.commit();
+        log(`✅ Importación completa: ${ok} clientes guardados.`, 'ok');
+        if (err) log(`⚠ ${err} filas omitidas por datos incompletos.`, 'err');
+      } catch(e) {
+        log(`❌ Error en lote final: ${e.message}`, 'err');
+      }
+    } else {
       log(`✅ Importación completa: ${ok} clientes guardados.`, 'ok');
       if (err) log(`⚠ ${err} filas omitidas por datos incompletos.`, 'err');
-    } catch(e) {
-      log(`❌ Error: ${e.message}`, 'err');
     }
 
     btn.disabled = false;
