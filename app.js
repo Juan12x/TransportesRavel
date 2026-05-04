@@ -50,6 +50,7 @@ const storage = firebase.storage();
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let trips          = [];
 let clients        = [];
+let costCenters    = [];
 let currentView    = 'dashboard';
 let editingId      = null;
 let deleteTargetId = null;
@@ -70,6 +71,11 @@ db.collection('trips').onSnapshot(snapshot => {
 // Sincronizar colección de clientes
 db.collection('clientes').onSnapshot(snapshot => {
   clients = snapshot.docs.map(d => d.data());
+});
+
+// Sincronizar colección de centros de costos
+db.collection('centrosCostos').onSnapshot(snapshot => {
+  costCenters = snapshot.docs.map(d => d.data()).sort((a, b) => a.label.localeCompare(b.label));
 });
 
 function save() {}
@@ -861,7 +867,9 @@ function fillClientFromHistory(c) {
   document.getElementById('cf_phone').value          = c.clientPhone;
   document.getElementById('cf_clientEmail').value    = c.clientEmail;
   document.getElementById('cf_invoiceEmail').value   = c.invoiceEmail;
-  if (c.costCenter) document.getElementById('cf_costCenter').value = c.costCenter;
+  const matchCC = costCenters.find(cc => cc.nit && cc.nit === c.clientNit);
+  if (matchCC)      document.getElementById('cf_costCenter').value = matchCC.label;
+  else if (c.costCenter) document.getElementById('cf_costCenter').value = c.costCenter;
   if (c.comercial)  document.getElementById('cf_comercial').value  = c.comercial;
   document.querySelectorAll('.ac-dropdown').forEach(d => d.style.display = 'none');
   showToast('Datos del cliente cargados', 'success');
@@ -903,6 +911,48 @@ function setupClientAutocomplete() {
     input.addEventListener('blur', () => {
       setTimeout(() => { dropdown.style.display = 'none'; }, 200);
     });
+  });
+}
+
+// ── AUTOCOMPLETAR CENTRO DE COSTOS ───────────────────────────────────────────
+function setupCostCenterAutocomplete() {
+  const input = document.getElementById('cf_costCenter');
+  if (!input) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ac-dropdown';
+  input.parentElement.style.position = 'relative';
+  input.parentElement.appendChild(dropdown);
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    dropdown.innerHTML = '';
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+    const matches = costCenters.filter(cc =>
+      (cc.codigo || '').toLowerCase().includes(q) ||
+      (cc.nit    || '').includes(q) ||
+      (cc.nombre || '').toLowerCase().includes(q) ||
+      (cc.label  || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+    matches.forEach(cc => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.innerHTML = `<span class="ac-name">${esc(cc.label)}</span><span class="ac-nit">${esc(cc.nit || cc.codigo)}</span>`;
+      item.addEventListener('mousedown', () => {
+        input.value = cc.label;
+        dropdown.style.display = 'none';
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
   });
 }
 
@@ -948,6 +998,7 @@ function setupComercialAutocomplete() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 showClientForm();
 setupClientAutocomplete();
+setupCostCenterAutocomplete();
 setupComercialAutocomplete();
 
 // Toggle sección cliente antiguo / nuevo
