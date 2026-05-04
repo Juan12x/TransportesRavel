@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Importar Clientes — Transportes Ravel</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:white;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);padding:32px;width:100%;max-width:680px}
+    h1{font-size:20px;color:#1e293b;margin-bottom:6px}
+    p{color:#64748b;font-size:14px;margin-bottom:20px}
+    .steps{background:#eff6ff;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#1e40af;line-height:1.8}
+    textarea{width:100%;height:220px;padding:12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;resize:vertical;outline:none}
+    textarea:focus{border-color:#3b82f6}
+    .btns{display:flex;gap:10px;margin-top:14px}
+    button{padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600}
+    .btn-primary{background:#2563eb;color:white}
+    .btn-primary:disabled{background:#93c5fd;cursor:not-allowed}
+    .btn-outline{background:white;border:1.5px solid #e2e8f0;color:#334155}
+    #log{margin-top:18px;background:#f8fafc;border-radius:8px;padding:14px;font-size:12.5px;font-family:monospace;max-height:200px;overflow-y:auto;display:none;color:#334155}
+    .ok{color:#16a34a}.err{color:#dc2626}.info{color:#2563eb}
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>📋 Importar Clientes a Firestore</h1>
+  <p>Carga masiva de la base de datos de clientes de Transportes Ravel.</p>
+
+  <div class="steps">
+    <strong>Pasos:</strong><br/>
+    1. Abre tu Excel y selecciona <strong>todas las filas de datos</strong> (sin la fila de encabezado)<br/>
+    2. Copia con <strong>Ctrl+C</strong><br/>
+    3. Pega aquí abajo con <strong>Ctrl+V</strong><br/>
+    4. Clic en <strong>Importar</strong>
+  </div>
+
+  <textarea id="data" placeholder="Pega aquí los datos copiados del Excel...&#10;&#10;Ejemplo:&#10;IBEROMODA SAS	NIT	900207065&#10;COFFEE STYLERS INVERSIONES SASA	NIT	901665053&#10;2C GROUP SAS	NIT	901524213"></textarea>
+
+  <div class="btns">
+    <button class="btn-primary" id="importBtn" onclick="importar()">Importar Clientes</button>
+    <button class="btn-outline" onclick="document.getElementById('data').value=''">Limpiar</button>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            'AIzaSyCgUAblhX56Hxp92cUbDYGcp0h55cA4fZQ',
+    authDomain:        'transportesravel2026.firebaseapp.com',
+    projectId:         'transportesravel2026',
+    storageBucket:     'transportesravel2026.firebasestorage.app',
+    messagingSenderId: '295541915149',
+    appId:             '1:295541915149:web:6e88a172e5b4f455e6df44'
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  function log(msg, type = 'info') {
+    const el = document.getElementById('log');
+    el.style.display = 'block';
+    el.innerHTML += `<span class="${type}">${msg}</span>\n`;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function importar() {
+    const raw = document.getElementById('data').value.trim();
+    if (!raw) { alert('Pega primero los datos del Excel.'); return; }
+
+    const btn = document.getElementById('importBtn');
+    btn.disabled = true;
+    btn.textContent = 'Importando...';
+    document.getElementById('log').innerHTML = '';
+
+    const filas = raw.split('\n').map(l => l.split('\t').map(c => c.trim())).filter(f => f.length >= 2 && f[0]);
+
+    log(`📂 ${filas.length} filas encontradas...`);
+
+    let ok = 0, err = 0;
+    const batch = db.batch();
+    const MAX_BATCH = 400;
+
+    for (let i = 0; i < filas.length; i++) {
+      const fila  = filas[i];
+      const nombre = fila[0] || '';
+      // Acepta formato de 2 columnas (nombre, id) o 3 columnas (nombre, tipo, id)
+      const tipoId = fila.length >= 3 ? fila[1] : 'NIT';
+      const identificacion = (fila.length >= 3 ? fila[2] : fila[1]).replace(/[.\-\s]/g, '');
+
+      if (!nombre || !identificacion) {
+        log(`⚠ Fila ${i+1} incompleta, se omite.`, 'err');
+        err++;
+        continue;
+      }
+
+      const docId = identificacion;
+      const ref   = db.collection('clientes').doc(docId);
+      batch.set(ref, {
+        nombre,
+        tipoId,
+        identificacion,
+        clientNit:      identificacion,
+        clientFullName: nombre,
+        clientName:     '',
+        clientPhone:    '',
+        clientEmail:    '',
+        invoiceEmail:   '',
+        costCenter:     '',
+        comercial:      '',
+        createdAt:      new Date().toISOString(),
+      }, { merge: true });
+
+      ok++;
+
+      // Firestore permite max 500 por batch — commit cada 400
+      if (ok % MAX_BATCH === 0) {
+        await batch.commit();
+        log(`✅ ${ok} clientes guardados...`, 'ok');
+      }
+    }
+
+    try {
+      await batch.commit();
+      log(`✅ Importación completa: ${ok} clientes guardados.`, 'ok');
+      if (err) log(`⚠ ${err} filas omitidas por datos incompletos.`, 'err');
+    } catch(e) {
+      log(`❌ Error: ${e.message}`, 'err');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Importar Clientes';
+  }
+</script>
+</body>
+</html>

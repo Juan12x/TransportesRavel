@@ -1,5 +1,24 @@
 'use strict';
 
+// ── COMERCIALES ───────────────────────────────────────────────────────────────
+const COMERCIALES = [
+  { cedula: '43274991',   nombre: 'JULY DAHYANA QUINTERO GALLEGO' },
+  { cedula: '98627115',   nombre: 'WILMAR VANEGAS ECHAVARRIA' },
+  { cedula: '43604830',   nombre: 'PAULA ANDREA BERMUDEZ COLORADO' },
+  { cedula: '1040745576', nombre: 'HECTOR ANDRES PINZON BERMUDEZ' },
+  { cedula: '1026149279', nombre: 'ANDRES FELIPE VASQUEZ VASQUEZ' },
+  { cedula: '1089745980', nombre: 'JUAN ESTEBAN SARRIA VARGAS' },
+  { cedula: '1036635455', nombre: 'ALEXIS PEREZ GUTIERREZ' },
+  { cedula: '1152453642', nombre: 'DOUGLAS ALONSO SARRAZOLA QUINTERO' },
+  { cedula: '1010193012', nombre: 'JULY FERNANDA VILLAMIL SALCEDO' },
+  { cedula: '1036647565', nombre: 'FRANCIS ARLEY MEJIA GOMEZ' },
+  { cedula: '1017180086', nombre: 'JHON FREDY MONTES TORO' },
+  { cedula: '43490704',   nombre: 'MONICA MARIA FRANCO MORALES' },
+  { cedula: '91278657',   nombre: 'CHRISTIAN MANUEL OCHOA PINZON' },
+  { cedula: '1152207360', nombre: 'ANDREA VERA MOLINA' },
+  { cedula: '71316400',   nombre: 'JOSE MAURICIO FERNANDEZ VALENCIA' },
+];
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const ADMIN_PIN = '1234';
 
@@ -30,6 +49,7 @@ const storage = firebase.storage();
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let trips          = [];
+let clients        = [];
 let currentView    = 'dashboard';
 let editingId      = null;
 let deleteTargetId = null;
@@ -46,6 +66,11 @@ db.collection('trips').onSnapshot(snapshot => {
     else if (currentView === 'calendar')  renderCalendar();
   }
 }, () => showToast('Error al conectar con la base de datos', 'error'));
+
+// Sincronizar colección de clientes
+db.collection('clientes').onSnapshot(snapshot => {
+  clients = snapshot.docs.map(d => d.data());
+});
 
 function save() {}
 
@@ -69,14 +94,43 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
   btn.disabled = true;
   btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> Enviando...';
 
-  const paymentMethodEl = document.querySelector('input[name="cf_paymentMethod"]:checked');
-  const serviceTypeEl   = document.querySelector('input[name="cf_serviceType"]:checked');
-  const fileInput       = document.getElementById('cf_supportDocs');
+  const paymentMethodEl  = document.querySelector('input[name="cf_paymentMethod"]:checked');
+  const serviceTypeEl    = document.querySelector('input[name="cf_serviceType"]:checked');
+  const clientStatusEl   = document.querySelector('input[name="cf_clientStatus"]:checked');
+  const clientStatus     = clientStatusEl ? clientStatusEl.value : 'antiguo';
+  const fileInput        = document.getElementById('cf_supportDocs');
   const file            = fileInput.files[0];
   const tripId          = nextId();
 
   let supportDocUrl  = '';
   let supportDocName = '';
+
+  // Resolve client identity from the antiguo/nuevo toggle
+  let resolvedNit = '', resolvedFullName = '', newClientData = null;
+  if (clientStatus === 'nuevo') {
+    const tipo = document.getElementById('cf_newTipo').value;
+    resolvedNit = document.getElementById('cf_newIdentificacion').value.trim().replace(/[.\-\s]/g, '');
+    if (tipo === 'persona') {
+      const nombres   = document.getElementById('cf_newNombres').value.trim();
+      const apellidos = document.getElementById('cf_newApellidos').value.trim();
+      resolvedFullName = [nombres, apellidos].filter(Boolean).join(' ') ||
+                         document.getElementById('cf_newNombreComercialP').value.trim();
+    } else {
+      resolvedFullName = document.getElementById('cf_newRazonSocial').value.trim() ||
+                         document.getElementById('cf_newNombreComercialE').value.trim();
+    }
+    newClientData = {
+      tipo,
+      tipoId:    document.getElementById('cf_newIdType').value,
+      dv:        document.getElementById('cf_newDv').value.trim(),
+      ciudad:    document.getElementById('cf_newCiudad').value.trim(),
+      direccion: document.getElementById('cf_newDireccion').value.trim(),
+      telefono:  document.getElementById('cf_newTelefono').value.trim(),
+    };
+  } else {
+    resolvedNit      = document.getElementById('cf_clientNit').value.trim();
+    resolvedFullName = document.getElementById('cf_clientFullName').value.trim();
+  }
 
   if (file) {
     try {
@@ -99,8 +153,8 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
     serviceType:      serviceTypeEl ? serviceTypeEl.value : '',
     costCenter:       document.getElementById('cf_costCenter').value,
     purchaseOrder:    document.getElementById('cf_purchaseOrder').value.trim(),
-    clientNit:        document.getElementById('cf_clientNit').value.trim(),
-    clientFullName:   document.getElementById('cf_clientFullName').value.trim(),
+    clientNit:        resolvedNit,
+    clientFullName:   resolvedFullName,
     entryChannel:     document.getElementById('cf_entryChannel').value,
     clientName:       document.getElementById('cf_name').value.trim(),
     clientPhone:      document.getElementById('cf_phone').value.trim(),
@@ -137,6 +191,8 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
 
   db.collection('trips').doc(String(trip.id)).set(trip)
     .then(() => {
+      if (newClientData) saveNewClient(trip, newClientData);
+      else saveClientIfNew(trip);
       sendNotificationEmail(trip);
       showClientSuccess();
     })
@@ -154,8 +210,10 @@ function showClientSuccess() {
 
 function showClientForm() {
   document.getElementById('clientForm').reset();
-  document.getElementById('clientFormCard').style.display   = 'block';
+  document.getElementById('clientFormCard').style.display    = 'block';
   document.getElementById('clientSuccessCard').style.display = 'none';
+  document.getElementById('cf_secAntiguo').style.display     = 'none';
+  document.getElementById('cf_secNuevo').style.display       = 'none';
 }
 
 document.getElementById('newRequestBtn').addEventListener('click', showClientForm);
@@ -733,7 +791,8 @@ function parsePrecio(id) {
 });
 
 // ── AUTO-CAPITALIZAR NOMBRES Y CIUDADES ───────────────────────────────────────
-['cf_name','cf_origin','cf_destination','cf_clientFullName','clientName','origin','destination','driver'].forEach(id => {
+['cf_name','cf_origin','cf_destination','cf_clientFullName','clientName','origin','destination','driver',
+ 'cf_newNombres','cf_newApellidos','cf_newNombreComercialP','cf_newRazonSocial','cf_newNombreComercialE','cf_newCiudad'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input', () => {
@@ -746,5 +805,162 @@ function parsePrecio(id) {
   });
 });
 
+// ── AUTOCOMPLETAR CLIENTE ─────────────────────────────────────────────────────
+function getUniqueClients() {
+  return clients;
+}
+
+function saveClientIfNew(trip) {
+  if (!trip.clientNit) return;
+  const exists = clients.some(c => c.clientNit === trip.clientNit);
+  if (!exists) {
+    db.collection('clientes').doc(trip.clientNit).set({
+      nombre:         trip.clientFullName || trip.clientName,
+      tipoId:         'NIT',
+      identificacion: trip.clientNit,
+      clientNit:      trip.clientNit,
+      clientFullName: trip.clientFullName || '',
+      clientName:     trip.clientName     || '',
+      clientPhone:    trip.clientPhone    || '',
+      clientEmail:    trip.clientEmail    || '',
+      invoiceEmail:   trip.invoiceEmail   || '',
+      costCenter:     trip.costCenter     || '',
+      comercial:      trip.comercial      || '',
+      createdAt:      new Date().toISOString(),
+    });
+  }
+}
+
+function saveNewClient(trip, data) {
+  if (!trip.clientNit) return;
+  db.collection('clientes').doc(trip.clientNit).set({
+    nombre:         trip.clientFullName,
+    tipoId:         data.tipoId,
+    identificacion: trip.clientNit,
+    dv:             data.dv,
+    tipo:           data.tipo,
+    clientNit:      trip.clientNit,
+    clientFullName: trip.clientFullName,
+    clientName:     trip.clientName     || '',
+    clientPhone:    trip.clientPhone    || '',
+    clientEmail:    trip.clientEmail    || '',
+    invoiceEmail:   trip.invoiceEmail   || '',
+    costCenter:     trip.costCenter     || '',
+    comercial:      trip.comercial      || '',
+    ciudad:         data.ciudad,
+    direccion:      data.direccion,
+    telefono:       data.telefono,
+    createdAt:      new Date().toISOString(),
+  }, { merge: true });
+}
+
+function fillClientFromHistory(c) {
+  document.getElementById('cf_clientNit').value      = c.clientNit;
+  document.getElementById('cf_clientFullName').value = c.clientFullName;
+  document.getElementById('cf_name').value           = c.clientName;
+  document.getElementById('cf_phone').value          = c.clientPhone;
+  document.getElementById('cf_clientEmail').value    = c.clientEmail;
+  document.getElementById('cf_invoiceEmail').value   = c.invoiceEmail;
+  if (c.costCenter) document.getElementById('cf_costCenter').value = c.costCenter;
+  if (c.comercial)  document.getElementById('cf_comercial').value  = c.comercial;
+  document.querySelectorAll('.ac-dropdown').forEach(d => d.style.display = 'none');
+  showToast('Datos del cliente cargados', 'success');
+}
+
+function setupClientAutocomplete() {
+  const configs = [
+    { id: 'cf_clientNit',      filter: (c, q) => c.clientNit.toLowerCase().includes(q) },
+    { id: 'cf_clientFullName', filter: (c, q) => c.clientFullName.toLowerCase().includes(q) },
+  ];
+
+  configs.forEach(({ id, filter }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'ac-dropdown';
+    input.parentElement.style.position = 'relative';
+    input.parentElement.appendChild(dropdown);
+
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase().trim();
+      dropdown.innerHTML = '';
+      if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+      const matches = getUniqueClients().filter(c => filter(c, q)).slice(0, 6);
+      if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+      matches.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'ac-item';
+        item.innerHTML = `<span class="ac-name">${esc(c.clientFullName || c.clientNit)}</span><span class="ac-nit">${esc(c.clientNit)}</span>`;
+        item.addEventListener('mousedown', () => fillClientFromHistory(c));
+        dropdown.appendChild(item);
+      });
+      dropdown.style.display = 'block';
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+    });
+  });
+}
+
+// ── AUTOCOMPLETAR COMERCIAL ───────────────────────────────────────────────────
+function setupComercialAutocomplete() {
+  const input = document.getElementById('cf_comercial');
+  if (!input) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ac-dropdown';
+  input.parentElement.style.position = 'relative';
+  input.parentElement.appendChild(dropdown);
+
+  input.addEventListener('input', () => {
+    const q = input.value.replace(/[,.\s]/g, '').toLowerCase();
+    dropdown.innerHTML = '';
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+    const matches = COMERCIALES.filter(c =>
+      c.cedula.includes(q) || c.nombre.toLowerCase().includes(q)
+    ).slice(0, 6);
+
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+    matches.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.innerHTML = `<span class="ac-name">${esc(c.nombre)}</span><span class="ac-nit">${c.cedula}</span>`;
+      item.addEventListener('mousedown', () => {
+        input.value = c.nombre;
+        dropdown.style.display = 'none';
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+  });
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 showClientForm();
+setupClientAutocomplete();
+setupComercialAutocomplete();
+
+// Toggle sección cliente antiguo / nuevo
+document.querySelectorAll('input[name="cf_clientStatus"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const val = document.querySelector('input[name="cf_clientStatus"]:checked')?.value;
+    document.getElementById('cf_secAntiguo').style.display = val === 'antiguo' ? 'block' : 'none';
+    document.getElementById('cf_secNuevo').style.display   = val === 'nuevo'   ? 'block' : 'none';
+  });
+});
+
+// Toggle persona / empresa dentro del formulario nuevo
+document.getElementById('cf_newTipo').addEventListener('change', function () {
+  document.getElementById('cf_personaFields').style.display = this.value === 'persona' ? 'block' : 'none';
+  document.getElementById('cf_empresaFields').style.display = this.value === 'empresa' ? 'block' : 'none';
+});

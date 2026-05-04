@@ -38,21 +38,12 @@
         <div class="cf-section">
           <div class="cf-section-title">Información Comercial</div>
 
-          <div class="cf-row cf-full">
-            <div class="form-group">
-              <label for="cf_submitterEmail">Correo Electrónico <span class="required">*</span></label>
-              <input type="email" id="cf_submitterEmail" placeholder="tucorreo@empresa.com" required />
-            </div>
-          </div>
+        
 
           <div class="cf-row">
             <div class="form-group">
-              <label for="cf_comercial">Comercial <span class="required">*</span></label>
-              <select id="cf_comercial" required>
-                <option value="">Seleccionar comercial...</option>
-                <!-- Completar con la lista real de comerciales -->
-                <option value="Por asignar">Por asignar</option>
-              </select>
+              <label for="cf_comercial">Comercial (nombre o cédula) <span class="required">*</span></label>
+              <input type="text" id="cf_comercial" placeholder="Buscar por nombre o cédula..." required autocomplete="off" />
             </div>
             <div class="form-group">
               <label>Servicio <span class="required">*</span></label>
@@ -85,14 +76,118 @@
             </div>
           </div>
 
-          <div class="cf-row">
+          <!-- TOGGLE CLIENTE NUEVO / ANTIGUO -->
+          <div class="cf-row cf-full">
             <div class="form-group">
-              <label for="cf_clientNit">NIT o Cédula Cliente <span class="required">*</span></label>
-              <input type="text" id="cf_clientNit" placeholder="Ej: 900.123.456-7" required />
+              <label>¿Es cliente nuevo o ya registrado? <span class="required">*</span></label>
+              <div class="cf-radio-group">
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_clientStatus" value="antiguo" required />
+                  Cliente ya registrado
+                </label>
+                <label class="cf-radio-label">
+                  <input type="radio" name="cf_clientStatus" value="nuevo" />
+                  Cliente nuevo
+                </label>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="cf_clientFullName">Nombre del Cliente (como aparece en el RUT) <span class="required">*</span></label>
-              <input type="text" id="cf_clientFullName" placeholder="Razón social o nombre completo" autocapitalize="words" required />
+          </div>
+
+          <!-- CLIENTE ANTIGUO: autocomplete por NIT -->
+          <div id="cf_secAntiguo" style="display:none;">
+            <div class="cf-row">
+              <div class="form-group">
+                <label for="cf_clientNit">NIT o Cédula Cliente <span class="required">*</span></label>
+                <input type="text" id="cf_clientNit" placeholder="Ej: 900207065" />
+              </div>
+              <div class="form-group">
+                <label for="cf_clientFullName">Nombre del Cliente (como aparece en el RUT) <span class="required">*</span></label>
+                <input type="text" id="cf_clientFullName" placeholder="Se autocompleta al escribir el NIT" autocapitalize="words" />
+              </div>
+            </div>
+          </div>
+
+          <!-- CLIENTE NUEVO: formulario de registro -->
+          <div id="cf_secNuevo" style="display:none;" class="cf-nuevo-box">
+            <div class="cf-row">
+              <div class="form-group">
+                <label for="cf_newTipo">Tipo <span class="required">*</span></label>
+                <select id="cf_newTipo">
+                  <option value="persona">Es persona</option>
+                  <option value="empresa">Empresa</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="cf_newIdType">Tipo de Identificación <span class="required">*</span></label>
+                <select id="cf_newIdType">
+                  <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                  <option value="NIT">NIT</option>
+                  <option value="Cédula de extranjería">Cédula de extranjería</option>
+                  <option value="Pasaporte">Pasaporte</option>
+                </select>
+              </div>
+            </div>
+            <div class="cf-row">
+              <div class="form-group">
+                <label for="cf_newIdentificacion">Identificación <span class="required">*</span></label>
+                <input type="text" id="cf_newIdentificacion" placeholder="Número sin puntos ni comas" inputmode="numeric" />
+              </div>
+              <div class="form-group" style="max-width:120px;">
+                <label for="cf_newDv">DV</label>
+                <input type="text" id="cf_newDv" placeholder="0" maxlength="1" inputmode="numeric" />
+              </div>
+            </div>
+
+            <!-- Campos para PERSONA -->
+            <div id="cf_personaFields">
+              <div class="cf-row">
+                <div class="form-group">
+                  <label for="cf_newNombres">Nombres <span class="required">*</span></label>
+                  <input type="text" id="cf_newNombres" placeholder="Nombres" autocapitalize="words" />
+                </div>
+                <div class="form-group">
+                  <label for="cf_newApellidos">Apellidos <span class="required">*</span></label>
+                  <input type="text" id="cf_newApellidos" placeholder="Apellidos" autocapitalize="words" />
+                </div>
+              </div>
+              <div class="cf-row cf-full">
+                <div class="form-group">
+                  <label for="cf_newNombreComercialP">Nombre Comercial</label>
+                  <input type="text" id="cf_newNombreComercialP" placeholder="Opcional" autocapitalize="words" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos para EMPRESA -->
+            <div id="cf_empresaFields" style="display:none;">
+              <div class="cf-row">
+                <div class="form-group">
+                  <label for="cf_newRazonSocial">Razón Social <span class="required">*</span></label>
+                  <input type="text" id="cf_newRazonSocial" placeholder="Nombre completo como en el RUT" autocapitalize="words" />
+                </div>
+                <div class="form-group">
+                  <label for="cf_newNombreComercialE">Nombre Comercial</label>
+                  <input type="text" id="cf_newNombreComercialE" placeholder="Opcional" autocapitalize="words" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos comunes -->
+            <div class="cf-row">
+              <div class="form-group">
+                <label for="cf_newCiudad">Ciudad</label>
+                <input type="text" id="cf_newCiudad" placeholder="Ciudad" value="Medellín" autocapitalize="words" />
+              </div>
+              <div class="form-group">
+                <label for="cf_newDireccion">Dirección</label>
+                <input type="text" id="cf_newDireccion" placeholder="Dirección" />
+              </div>
+            </div>
+            <div class="cf-row cf-full">
+              <div class="form-group">
+                <label for="cf_newTelefono">Teléfono</label>
+                <input type="tel" id="cf_newTelefono" placeholder="+57 604 0000000" />
+              </div>
             </div>
           </div>
 
@@ -540,7 +635,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="paymentMethod">Forma de Pago</label>
-                <select id="paymentMethod">
+                <select id="paymentMethod">c
                   <option value="">Seleccionar...</option>
                   <option value="Efectivo">Efectivo</option>
                   <option value="Transferencia">Transferencia bancaria</option>
