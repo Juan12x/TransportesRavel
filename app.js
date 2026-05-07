@@ -51,6 +51,8 @@ const storage = firebase.storage();
 let trips          = [];
 let clients        = [];
 let costCenters    = [];
+let bitacoraList   = [];
+let btDeleteId     = null;
 let currentView    = 'dashboard';
 let editingId      = null;
 let deleteTargetId = null;
@@ -76,6 +78,13 @@ db.collection('clientes').onSnapshot(snapshot => {
 // Sincronizar colección de centros de costos
 db.collection('centrosCostos').onSnapshot(snapshot => {
   costCenters = snapshot.docs.map(d => d.data()).sort((a, b) => a.label.localeCompare(b.label));
+});
+
+// Sincronizar bitácora
+db.collection('bitacora').onSnapshot(snapshot => {
+  bitacoraList = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }))
+    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+  if (document.body.classList.contains('admin-mode') && currentView === 'bitacora') renderBitacora();
 });
 
 function save() {}
@@ -314,7 +323,7 @@ function showView(name) {
   const navLink = document.querySelector(`.nav-item[data-view="${name}"]`);
   if (navLink) navLink.classList.add('active');
 
-  const titles = { dashboard: 'Dashboard', records: 'Registros', new: 'Nuevo Viaje', calendar: 'Calendario' };
+  const titles = { dashboard: 'Dashboard', records: 'Registros', new: 'Nuevo Viaje', calendar: 'Calendario', bitacora: 'Bitácora' };
   document.getElementById('topbarTitle').textContent = titles[name] || '';
 
   currentView = name;
@@ -323,6 +332,7 @@ function showView(name) {
   if (name === 'dashboard') renderDashboard();
   if (name === 'records')   renderRecords();
   if (name === 'calendar')  renderCalendar();
+  if (name === 'bitacora')  renderBitacora();
   if (name === 'new' && !editingId) resetForm();
 }
 
@@ -995,11 +1005,197 @@ function setupComercialAutocomplete() {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// BITÁCORA
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderBitacora() {
+  const q = (document.getElementById('bitacoraSearch')?.value || '').toLowerCase().trim();
+  const rows = bitacoraList.filter(b =>
+    !q ||
+    (b.codigo      || '').toLowerCase().includes(q) ||
+    (b.cliente     || '').toLowerCase().includes(q) ||
+    (b.origen      || '').toLowerCase().includes(q) ||
+    (b.destino     || '').toLowerCase().includes(q) ||
+    (b.centroCostos|| '').toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('bitacoraBody');
+  const empty = document.getElementById('bitacoraEmpty');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map(b => `
+    <tr>
+      <td><strong>${esc(b.codigo)}</strong></td>
+      <td>${esc(b.cliente)}</td>
+      <td><span class="badge badge-${b.servicio === 'Empresarial' ? 'blue' : 'green'}">${esc(b.servicio)}</span></td>
+      <td>${esc(b.comercial || '—')}</td>
+      <td>${esc(b.origen)}</td>
+      <td>${esc(b.horaSalida)}</td>
+      <td>${esc(b.destino)}</td>
+      <td>${esc(b.horaRegreso || 'N/A')}</td>
+      <td>$${Number(b.valorServicio || 0).toLocaleString('es-CL')}</td>
+      <td>$${Number(b.valorProveedor || 0).toLocaleString('es-CL')}</td>
+      <td>${esc(b.centroCostos || '—')}</td>
+      <td>${esc(b.ingreso || '—')}</td>
+      <td class="actions-cell">
+        <button class="btn-icon" title="Editar" onclick="openBitacoraForm('${b._docId}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" title="Eliminar" onclick="confirmDeleteBitacora('${b._docId}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/></svg>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function openBitacoraForm(docId) {
+  const b = docId ? bitacoraList.find(x => x._docId === docId) : null;
+  document.getElementById('bitacoraFormTitle').textContent = b ? 'Editar Servicio' : 'Agregar Servicio';
+  document.getElementById('bt_id').value            = docId || '';
+  document.getElementById('bt_codigo').value        = b?.codigo        || '';
+  document.getElementById('bt_servicio').value      = b?.servicio      || 'Empresarial';
+  document.getElementById('bt_cliente').value       = b?.cliente       || '';
+  document.getElementById('bt_comercial').value     = b?.comercial     || '';
+  document.getElementById('bt_origen').value        = b?.origen        || '';
+  document.getElementById('bt_horaSalida').value    = b?.horaSalida    || '';
+  document.getElementById('bt_destino').value       = b?.destino       || '';
+  document.getElementById('bt_horaRegreso').value   = b?.horaRegreso   || '';
+  document.getElementById('bt_valorServicio').value = b?.valorServicio ? Number(b.valorServicio).toLocaleString('es-CL') : '';
+  document.getElementById('bt_valorProveedor').value= b?.valorProveedor? Number(b.valorProveedor).toLocaleString('es-CL') : '';
+  document.getElementById('bt_centroCostos').value  = b?.centroCostos  || '';
+  document.getElementById('bt_ingreso').value       = b?.ingreso       || 'Cliente Antiguo';
+  document.getElementById('bitacoraOverlay').classList.add('open');
+}
+
+function closeBitacoraForm() {
+  document.getElementById('bitacoraOverlay').classList.remove('open');
+}
+
+function saveBitacora() {
+  const docId   = document.getElementById('bt_id').value.trim();
+  const codigo  = document.getElementById('bt_codigo').value.trim();
+  const cliente = document.getElementById('bt_cliente').value.trim();
+  const origen  = document.getElementById('bt_origen').value.trim();
+
+  if (!codigo || !cliente || !origen) {
+    showToast('Completa los campos obligatorios (Código, Cliente, Origen)', 'error');
+    return;
+  }
+
+  const parseBt = id => Number((document.getElementById(id).value || '0').replace(/\./g, '').replace(/,/g, '')) || 0;
+
+  const data = {
+    codigo,
+    servicio:      document.getElementById('bt_servicio').value,
+    cliente,
+    comercial:     document.getElementById('bt_comercial').value.trim(),
+    origen,
+    horaSalida:    document.getElementById('bt_horaSalida').value,
+    destino:       document.getElementById('bt_destino').value.trim(),
+    horaRegreso:   document.getElementById('bt_horaRegreso').value.trim() || 'N/A',
+    valorServicio: parseBt('bt_valorServicio'),
+    valorProveedor:parseBt('bt_valorProveedor'),
+    centroCostos:  document.getElementById('bt_centroCostos').value.trim(),
+    ingreso:       document.getElementById('bt_ingreso').value,
+    updatedAt:     new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('bt_saveBtn');
+  btn.disabled = true;
+
+  const ref = docId
+    ? db.collection('bitacora').doc(docId)
+    : db.collection('bitacora').doc();
+
+  if (!docId) data.createdAt = new Date().toISOString();
+
+  ref.set(data, { merge: true })
+    .then(() => {
+      closeBitacoraForm();
+      showToast(docId ? 'Servicio actualizado' : 'Servicio agregado', 'success');
+    })
+    .catch(() => showToast('Error al guardar', 'error'))
+    .finally(() => { btn.disabled = false; });
+}
+
+function confirmDeleteBitacora(docId) {
+  btDeleteId = docId;
+  document.getElementById('btConfirmOverlay').classList.add('open');
+}
+
+document.getElementById('btConfirmDelete').addEventListener('click', () => {
+  if (!btDeleteId) return;
+  db.collection('bitacora').doc(btDeleteId).delete()
+    .then(() => showToast('Servicio eliminado', 'success'))
+    .catch(() => showToast('Error al eliminar', 'error'));
+  document.getElementById('btConfirmOverlay').classList.remove('open');
+  btDeleteId = null;
+});
+
+// Autocomplete en el modal de bitácora (reutiliza costCenters y COMERCIALES)
+function setupBitacoraAutocomplete() {
+  // Centro de costos
+  setupGenericAC('bt_centroCostos', () =>
+    costCenters.map(cc => ({ label: cc.label, sub: cc.nit || cc.codigo }))
+  );
+  // Comercial
+  setupGenericAC('bt_comercial', () =>
+    COMERCIALES.map(c => ({ label: c.nombre, sub: c.cedula }))
+  );
+}
+
+function setupGenericAC(inputId, getItems) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ac-dropdown';
+  input.parentElement.style.position = 'relative';
+  input.parentElement.appendChild(dropdown);
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    dropdown.innerHTML = '';
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    const matches = getItems().filter(i =>
+      i.label.toLowerCase().includes(q) || (i.sub || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+    matches.forEach(i => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.innerHTML = `<span class="ac-name">${esc(i.label)}</span><span class="ac-nit">${esc(i.sub || '')}</span>`;
+      item.addEventListener('mousedown', () => { input.value = i.label; dropdown.style.display = 'none'; });
+      dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+  });
+  input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
+}
+
+// Formato de precios en el modal de bitácora
+['bt_valorServicio', 'bt_valorProveedor'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const raw = el.value.replace(/\D/g, '');
+    el.value  = raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  });
+});
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 showClientForm();
 setupClientAutocomplete();
 setupCostCenterAutocomplete();
 setupComercialAutocomplete();
+setupBitacoraAutocomplete();
 
 // Toggle sección cliente antiguo / nuevo
 document.querySelectorAll('input[name="cf_clientStatus"]').forEach(radio => {

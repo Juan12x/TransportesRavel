@@ -395,6 +395,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Calendario</span>
       </a>
+      <a href="#" class="nav-item" data-view="bitacora">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+        <span>Bitácora</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <span id="recordCount">0 registros</span>
@@ -698,6 +702,46 @@
         </div>
       </section>
 
+      <!-- BITÁCORA VIEW -->
+      <section class="view" id="view-bitacora">
+        <div class="page-header">
+          <h1>Bitácora de Servicios</h1>
+          <p>Registro de servicios fijos y recurrentes</p>
+        </div>
+        <div class="card">
+          <div class="filters-bar">
+            <input type="text" id="bitacoraSearch" placeholder="Buscar por código, cliente, origen..." class="search-input" oninput="renderBitacora()" />
+            <button class="btn btn-primary" onclick="openBitacoraForm()">+ Agregar Servicio</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table bitacora-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Servicio</th>
+                  <th>Comercial</th>
+                  <th>Origen</th>
+                  <th>H. Salida</th>
+                  <th>Destino</th>
+                  <th>H. Regreso</th>
+                  <th>V. Servicio</th>
+                  <th>V. Proveedor</th>
+                  <th>Centro de Costos</th>
+                  <th>Ingreso</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bitacoraBody"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="bitacoraEmpty" style="display:none;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <p>No hay servicios registrados aún</p>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -749,6 +793,105 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" id="pinCancelBtn">Cancelar</button>
         <button class="btn btn-primary" id="pinSubmitBtn">Ingresar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL BITÁCORA ═══ -->
+  <div class="modal-overlay" id="bitacoraOverlay">
+    <div class="modal bitacora-modal">
+      <div class="modal-header">
+        <h2 id="bitacoraFormTitle">Agregar Servicio</h2>
+        <button class="modal-close" onclick="closeBitacoraForm()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bt_id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Código <span class="required">*</span></label>
+            <input type="text" id="bt_codigo" placeholder="Ej: A00016" />
+          </div>
+          <div class="form-group">
+            <label>Servicio <span class="required">*</span></label>
+            <select id="bt_servicio">
+              <option value="Empresarial">Empresarial</option>
+              <option value="Turismo">Turismo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cliente <span class="required">*</span></label>
+            <input type="text" id="bt_cliente" placeholder="Nombre del cliente" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Comercial</label>
+            <input type="text" id="bt_comercial" placeholder="Nombre o cédula" autocomplete="off" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Origen <span class="required">*</span></label>
+            <input type="text" id="bt_origen" placeholder="Ciudad / Punto de origen" autocapitalize="words" />
+          </div>
+          <div class="form-group">
+            <label>H. Salida <span class="required">*</span></label>
+            <input type="time" id="bt_horaSalida" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Destino <span class="required">*</span></label>
+            <input type="text" id="bt_destino" placeholder="Ciudad / Punto destino" autocapitalize="words" />
+          </div>
+          <div class="form-group">
+            <label>H. Regreso</label>
+            <input type="text" id="bt_horaRegreso" placeholder="HH:MM o N/A" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor Servicio <span class="required">*</span></label>
+            <div class="input-prefix"><span>$</span><input type="text" inputmode="numeric" id="bt_valorServicio" placeholder="0" /></div>
+          </div>
+          <div class="form-group">
+            <label>Valor Proveedor</label>
+            <div class="input-prefix"><span>$</span><input type="text" inputmode="numeric" id="bt_valorProveedor" placeholder="0" /></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Centro de Costos</label>
+            <input type="text" id="bt_centroCostos" placeholder="Buscar centro de costos..." autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Ingreso</label>
+            <select id="bt_ingreso">
+              <option value="Cliente Antiguo">Cliente Antiguo</option>
+              <option value="Cliente Nuevo">Cliente Nuevo</option>
+              <option value="Whatsapp Directo">Whatsapp Directo</option>
+              <option value="Pauta">Pauta</option>
+              <option value="Referido">Referido</option>
+              <option value="Gestión Comercial">Gestión Comercial</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeBitacoraForm()">Cancelar</button>
+        <button class="btn btn-primary" id="bt_saveBtn" onclick="saveBitacora()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL CONFIRMAR ELIMINAR BITÁCORA ═══ -->
+  <div class="modal-overlay" id="btConfirmOverlay">
+    <div class="modal small-modal">
+      <div class="modal-header"><h2>Confirmar eliminación</h2></div>
+      <div class="modal-body"><p>¿Eliminar este servicio de la bitácora? Esta acción no se puede deshacer.</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="document.getElementById('btConfirmOverlay').classList.remove('open')">Cancelar</button>
+        <button class="btn btn-danger" id="btConfirmDelete">Sí, eliminar</button>
       </div>
     </div>
   </div>
