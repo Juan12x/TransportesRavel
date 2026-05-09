@@ -906,14 +906,11 @@ function setupClientAutocomplete() {
     input.parentElement.style.position = 'relative';
     input.parentElement.appendChild(dropdown);
 
-    input.addEventListener('input', () => {
-      const q = input.value.toLowerCase().trim();
+    function showClients(q) {
       dropdown.innerHTML = '';
-      if (q.length < 2) { dropdown.style.display = 'none'; return; }
-
-      const matches = getUniqueClients().filter(c => filter(c, q)).slice(0, 6);
+      const all = getUniqueClients();
+      const matches = q ? all.filter(c => filter(c, q)).slice(0, 10) : all.slice(0, 20);
       if (!matches.length) { dropdown.style.display = 'none'; return; }
-
       matches.forEach(c => {
         const item = document.createElement('div');
         item.className = 'ac-item';
@@ -922,11 +919,11 @@ function setupClientAutocomplete() {
         dropdown.appendChild(item);
       });
       dropdown.style.display = 'block';
-    });
+    }
 
-    input.addEventListener('blur', () => {
-      setTimeout(() => { dropdown.style.display = 'none'; }, 200);
-    });
+    input.addEventListener('focus', () => showClients(input.value.toLowerCase().trim()));
+    input.addEventListener('input', () => showClients(input.value.toLowerCase().trim()));
+    input.addEventListener('blur',  () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
   });
 }
 
@@ -940,36 +937,30 @@ function setupCostCenterAutocomplete() {
   input.parentElement.style.position = 'relative';
   input.parentElement.appendChild(dropdown);
 
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase().trim();
+  function showCC(q) {
     dropdown.innerHTML = '';
-    if (q.length < 2) { dropdown.style.display = 'none'; return; }
-
-    const matches = costCenters.filter(cc =>
-      (cc.codigo || '').toLowerCase().includes(q) ||
-      (cc.nit    || '').includes(q) ||
-      (cc.nombre || '').toLowerCase().includes(q) ||
-      (cc.label  || '').toLowerCase().includes(q)
-    ).slice(0, 8);
-
+    const matches = q
+      ? costCenters.filter(cc =>
+          (cc.codigo || '').toLowerCase().includes(q) ||
+          (cc.nit    || '').includes(q) ||
+          (cc.nombre || '').toLowerCase().includes(q) ||
+          (cc.label  || '').toLowerCase().includes(q)
+        ).slice(0, 12)
+      : costCenters.slice(0, 30);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
-
     matches.forEach(cc => {
       const item = document.createElement('div');
       item.className = 'ac-item';
       item.innerHTML = `<span class="ac-name">${esc(cc.label)}</span><span class="ac-nit">${esc(cc.nit || cc.codigo)}</span>`;
-      item.addEventListener('mousedown', () => {
-        input.value = cc.label;
-        dropdown.style.display = 'none';
-      });
+      item.addEventListener('mousedown', () => { input.value = cc.label; dropdown.style.display = 'none'; });
       dropdown.appendChild(item);
     });
     dropdown.style.display = 'block';
-  });
+  }
 
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
-  });
+  input.addEventListener('focus', () => showCC(input.value.toLowerCase().trim()));
+  input.addEventListener('input', () => showCC(input.value.toLowerCase().trim()));
+  input.addEventListener('blur',  () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
 }
 
 // ── AUTOCOMPLETAR COMERCIAL ───────────────────────────────────────────────────
@@ -982,33 +973,25 @@ function setupComercialAutocomplete() {
   input.parentElement.style.position = 'relative';
   input.parentElement.appendChild(dropdown);
 
-  input.addEventListener('input', () => {
-    const q = input.value.replace(/[,.\s]/g, '').toLowerCase();
+  function showComerciales(q) {
     dropdown.innerHTML = '';
-    if (q.length < 2) { dropdown.style.display = 'none'; return; }
-
-    const matches = COMERCIALES.filter(c =>
-      c.cedula.includes(q) || c.nombre.toLowerCase().includes(q)
-    ).slice(0, 6);
-
+    const matches = q
+      ? COMERCIALES.filter(c => c.cedula.includes(q) || c.nombre.toLowerCase().includes(q)).slice(0, 8)
+      : COMERCIALES.slice();
     if (!matches.length) { dropdown.style.display = 'none'; return; }
-
     matches.forEach(c => {
       const item = document.createElement('div');
       item.className = 'ac-item';
       item.innerHTML = `<span class="ac-name">${esc(c.nombre)}</span><span class="ac-nit">${c.cedula}</span>`;
-      item.addEventListener('mousedown', () => {
-        input.value = c.nombre;
-        dropdown.style.display = 'none';
-      });
+      item.addEventListener('mousedown', () => { input.value = c.nombre; dropdown.style.display = 'none'; });
       dropdown.appendChild(item);
     });
     dropdown.style.display = 'block';
-  });
+  }
 
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
-  });
+  input.addEventListener('focus', () => showComerciales(input.value.replace(/[,.\s]/g, '').toLowerCase()));
+  input.addEventListener('input', () => showComerciales(input.value.replace(/[,.\s]/g, '').toLowerCase()));
+  input.addEventListener('blur',  () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1211,14 +1194,11 @@ function setupBitacoraAutocomplete() {
     dd.className = 'ac-dropdown';
     placaInput.parentElement.style.position = 'relative';
     placaInput.parentElement.appendChild(dd);
-    placaInput.addEventListener('input', () => {
-      const q = placaInput.value.toLowerCase().trim();
+    function showPlacas(q) {
       dd.innerHTML = '';
-      if (q.length < 2) { dd.style.display = 'none'; return; }
-      const matches = conductores.filter(c =>
-        (c.placa || '').toLowerCase().includes(q) ||
-        (c.conductor || '').toLowerCase().includes(q)
-      ).slice(0, 8);
+      const matches = q
+        ? conductores.filter(c => (c.placa||'').toLowerCase().includes(q) || (c.conductor||'').toLowerCase().includes(q)).slice(0, 10)
+        : conductores.slice(0, 20);
       if (!matches.length) { dd.style.display = 'none'; return; }
       matches.forEach(c => {
         const item = document.createElement('div');
@@ -1233,8 +1213,10 @@ function setupBitacoraAutocomplete() {
         dd.appendChild(item);
       });
       dd.style.display = 'block';
-    });
-    placaInput.addEventListener('blur', () => setTimeout(() => { dd.style.display = 'none'; }, 200));
+    }
+    placaInput.addEventListener('focus', () => showPlacas(placaInput.value.toLowerCase().trim()));
+    placaInput.addEventListener('input', () => showPlacas(placaInput.value.toLowerCase().trim()));
+    placaInput.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 200));
   }
   // Comercial
   setupGenericAC('bt_comercial', () => COMERCIALES.map(c => ({ label: c.nombre, sub: c.cedula })));
@@ -1255,13 +1237,12 @@ function setupGenericAC(inputId, getItems, onSelect) {
   input.parentElement.style.position = 'relative';
   input.parentElement.appendChild(dropdown);
 
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase().trim();
+  function show(q) {
     dropdown.innerHTML = '';
-    if (q.length < 2) { dropdown.style.display = 'none'; return; }
-    const matches = getItems().filter(i =>
-      i.label.toLowerCase().includes(q) || (i.sub || '').toLowerCase().includes(q)
-    ).slice(0, 8);
+    const all = getItems();
+    const matches = q
+      ? all.filter(i => i.label.toLowerCase().includes(q) || (i.sub || '').toLowerCase().includes(q)).slice(0, 10)
+      : all.slice(0, 20);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
     matches.forEach(i => {
       const item = document.createElement('div');
@@ -1275,8 +1256,11 @@ function setupGenericAC(inputId, getItems, onSelect) {
       dropdown.appendChild(item);
     });
     dropdown.style.display = 'block';
-  });
-  input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
+  }
+
+  input.addEventListener('focus', () => show(input.value.toLowerCase().trim()));
+  input.addEventListener('input', () => show(input.value.toLowerCase().trim()));
+  input.addEventListener('blur',  () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
 }
 
 // Formato de precios en el modal de bitácora
