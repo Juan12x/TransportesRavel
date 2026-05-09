@@ -710,26 +710,33 @@
         </div>
         <div class="card">
           <div class="filters-bar">
-            <input type="text" id="bitacoraSearch" placeholder="Buscar por código, cliente, origen..." class="search-input" oninput="renderBitacora()" />
-            <button class="btn btn-primary" onclick="openBitacoraForm()">+ Agregar Servicio</button>
+            <input type="text" id="bitacoraSearch" placeholder="Buscar cliente, ODS, origen, placa..." class="search-input" oninput="renderBitacora()" />
+            <input type="date" id="btDateFrom" class="filter-select" onchange="renderBitacora()" title="Desde" />
+            <input type="date" id="btDateTo"   class="filter-select" onchange="renderBitacora()" title="Hasta" />
+            <button class="btn btn-primary" onclick="openBitacoraForm()">+ Nuevo Empresarial</button>
           </div>
           <div class="table-wrapper">
             <table class="data-table bitacora-table">
               <thead>
                 <tr>
-                  <th>Código</th>
+                  <th>#</th>
+                  <th>Fecha</th>
+                  <th>ODS</th>
                   <th>Cliente</th>
-                  <th>Servicio</th>
+                  <th>Tipo</th>
+                  <th>Canal</th>
                   <th>Comercial</th>
                   <th>Origen</th>
-                  <th>H. Salida</th>
+                  <th>H.S</th>
                   <th>Destino</th>
-                  <th>H. Regreso</th>
-                  <th>V. Servicio</th>
-                  <th>V. Proveedor</th>
+                  <th>H.R</th>
+                  <th>Placa</th>
+                  <th>Proveedor</th>
                   <th>Conductor</th>
-                  <th>Centro de Costos</th>
-                  <th>Ingreso</th>
+                  <th>Cel</th>
+                  <th>V. Servicio</th>
+                  <th>Pago Serv.</th>
+                  <th>Utilidad</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -802,28 +809,46 @@
   <div class="modal-overlay" id="bitacoraOverlay">
     <div class="modal bitacora-modal">
       <div class="modal-header">
-        <h2 id="bitacoraFormTitle">Agregar Servicio</h2>
+        <h2 id="bitacoraFormTitle">Nuevo Servicio Empresarial</h2>
         <button class="modal-close" onclick="closeBitacoraForm()">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="bt_id" />
+        <input type="hidden" id="bt_clienteNit" />
         <div class="form-row">
           <div class="form-group">
-            <label>Código <span class="required">*</span></label>
-            <input type="text" id="bt_codigo" placeholder="Ej: A00016" />
+            <label>Fecha <span class="required">*</span></label>
+            <input type="date" id="bt_fecha" />
           </div>
           <div class="form-group">
-            <label>Servicio <span class="required">*</span></label>
-            <select id="bt_servicio">
-              <option value="Empresarial">Empresarial</option>
-              <option value="Turismo">Turismo</option>
-            </select>
+            <label>ODS / Código del Servicio</label>
+            <input type="text" id="bt_ods" placeholder="Ej: C001-RUTA ORIENTE AM 2026" />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Cliente <span class="required">*</span></label>
             <input type="text" id="bt_cliente" placeholder="Nombre del cliente" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="bt_tipo">
+              <option value="Empresarial">Empresarial</option>
+              <option value="Turismo">Turismo</option>
+              <option value="Ocasional">Ocasional</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Canal de Ingreso</label>
+            <select id="bt_canal">
+              <option value="Cliente Antiguo">Cliente Antiguo</option>
+              <option value="Whatsapp Directo">Whatsapp Directo</option>
+              <option value="Pauta">Pauta</option>
+              <option value="Referido">Referido</option>
+              <option value="Gestión Comercial">Gestión Comercial</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Comercial</label>
@@ -836,7 +861,7 @@
             <input type="text" id="bt_origen" placeholder="Ciudad / Punto de origen" autocapitalize="words" />
           </div>
           <div class="form-group">
-            <label>H. Salida <span class="required">*</span></label>
+            <label>H. Salida</label>
             <input type="time" id="bt_horaSalida" />
           </div>
         </div>
@@ -852,35 +877,35 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Valor Servicio <span class="required">*</span></label>
+            <label>Placa</label>
+            <input type="text" id="bt_placa" placeholder="Buscar por placa..." autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Proveedor</label>
+            <select id="bt_proveedor">
+              <option value="Tercero">Tercero</option>
+              <option value="Propio">Propio</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Conductor</label>
+            <input type="text" id="bt_conductor" placeholder="Se rellena al seleccionar placa" />
+          </div>
+          <div class="form-group">
+            <label>Celular Conductor</label>
+            <input type="text" id="bt_conductorCel" placeholder="Teléfono" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>V. Servicio <span class="required">*</span></label>
             <div class="input-prefix"><span>$</span><input type="text" inputmode="numeric" id="bt_valorServicio" placeholder="0" /></div>
           </div>
           <div class="form-group">
-            <label>Valor Proveedor</label>
+            <label>Pago al Proveedor</label>
             <div class="input-prefix"><span>$</span><input type="text" inputmode="numeric" id="bt_valorProveedor" placeholder="0" /></div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Conductor (Placa o Nombre)</label>
-            <input type="text" id="bt_conductor" placeholder="Buscar por placa o nombre..." autocomplete="off" />
-          </div>
-          <div class="form-group">
-            <label>Centro de Costos</label>
-            <input type="text" id="bt_centroCostos" placeholder="Buscar centro de costos..." autocomplete="off" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Ingreso</label>
-            <select id="bt_ingreso">
-              <option value="Cliente Antiguo">Cliente Antiguo</option>
-              <option value="Cliente Nuevo">Cliente Nuevo</option>
-              <option value="Whatsapp Directo">Whatsapp Directo</option>
-              <option value="Pauta">Pauta</option>
-              <option value="Referido">Referido</option>
-              <option value="Gestión Comercial">Gestión Comercial</option>
-            </select>
           </div>
         </div>
       </div>
