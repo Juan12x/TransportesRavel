@@ -68,6 +68,7 @@ db.collection('trips').onSnapshot(snapshot => {
     if      (currentView === 'dashboard') renderDashboard();
     else if (currentView === 'records')   renderRecords();
     else if (currentView === 'calendar')  renderCalendar();
+    else if (currentView === 'bitacora')  renderBitacora();
   }
 }, () => showToast('Error al conectar con la base de datos', 'error'));
 
@@ -173,7 +174,7 @@ document.getElementById('clientForm').addEventListener('submit', async e => {
     comercial:        document.getElementById('cf_comercial').value,
     serviceType:      serviceTypeEl ? serviceTypeEl.value : '',
     costCenter:       document.getElementById('cf_costCenter').value,
-    purchaseOrder:    document.getElementById('cf_purchaseOrder').value.trim(),
+    purchaseOrder:    document.getElementById('cf_purchaseOrder').value.trim() || 'OS-' + String(tripId).padStart(4, '0'),
     clientNit:        resolvedNit,
     clientFullName:   resolvedFullName,
     entryChannel:     document.getElementById('cf_entryChannel').value,
@@ -235,6 +236,9 @@ function showClientForm() {
   document.getElementById('clientSuccessCard').style.display = 'none';
   document.getElementById('cf_secAntiguo').style.display     = 'none';
   document.getElementById('cf_secNuevo').style.display       = 'none';
+  const nextOds = 'OS-' + String(nextId()).padStart(4, '0');
+  const odsField = document.getElementById('cf_purchaseOrder');
+  if (odsField) odsField.value = nextOds;
 }
 
 document.getElementById('newRequestBtn').addEventListener('click', showClientForm);
