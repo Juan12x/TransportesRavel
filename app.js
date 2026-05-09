@@ -53,6 +53,7 @@ let clients        = [];
 let costCenters    = [];
 let conductores    = [];
 let bitacoraList   = [];
+let rutas          = [];
 let btDeleteId     = null;
 let currentView    = 'dashboard';
 let editingId      = null;
@@ -87,10 +88,14 @@ db.collection('conductores').onSnapshot(snapshot => {
   conductores = snapshot.docs.map(d => d.data()).sort((a, b) => (a.conductor || '').localeCompare(b.conductor || ''));
 });
 
-// Sincronizar bitácora
-db.collection('bitacora').onSnapshot(snapshot => {
-  bitacoraList = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }))
-    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+// Sincronizar rutas empresariales (plantillas permanentes, sin fecha)
+db.collection('rutasEmpresariales').onSnapshot(snapshot => {
+  rutas = snapshot.docs
+    .map(d => ({ ...d.data(), id: d.id }))
+    .sort((a, b) =>
+      (a.clientFullName || '').localeCompare(b.clientFullName || '') ||
+      (a.departureTime  || '').localeCompare(b.departureTime  || '')
+    );
   if (document.body.classList.contains('admin-mode') && currentView === 'bitacora') renderBitacora();
 });
 
@@ -333,7 +338,7 @@ function showView(name) {
   const navLink = document.querySelector(`.nav-item[data-view="${name}"]`);
   if (navLink) navLink.classList.add('active');
 
-  const titles = { dashboard: 'Dashboard', records: 'Registros', new: 'Nuevo Viaje', calendar: 'Calendario', bitacora: 'Bitácora' };
+  const titles = { dashboard: 'Dashboard', records: 'Registros', new: 'Nuevo Viaje', calendar: 'Calendario', bitacora: 'Programación' };
   document.getElementById('topbarTitle').textContent = titles[name] || '';
 
   currentView = name;
@@ -342,12 +347,26 @@ function showView(name) {
   if (name === 'dashboard') renderDashboard();
   if (name === 'records')   renderRecords();
   if (name === 'calendar')  renderCalendar();
-  if (name === 'bitacora')  renderBitacora();
+  if (name === 'bitacora') {
+    const pgDate = document.getElementById('pgDate');
+    if (pgDate && !pgDate.value) pgDate.value = new Date().toISOString().slice(0, 10);
+    renderBitacora();
+  }
   if (name === 'new' && !editingId) resetForm();
 }
 
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
+}
+
+function pgChangeDate(delta) {
+  const input = document.getElementById('pgDate');
+  if (!input) return;
+  if (!input.value) input.value = new Date().toISOString().slice(0, 10);
+  const d = new Date(input.value + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  input.value = d.toISOString().slice(0, 10);
+  renderBitacora();
 }
 
 document.getElementById('menuBtn').addEventListener('click', () => {
@@ -1003,93 +1022,208 @@ function setupComercialAutocomplete() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function renderBitacora() {
-  const q    = (document.getElementById('bitacoraSearch')?.value || '').toLowerCase().trim();
-  const from = document.getElementById('btDateFrom')?.value || '';
-  const to   = document.getElementById('btDateTo')?.value   || '';
+  const selectedDate = document.getElementById('pgDate')?.value || '';
+  const q = (document.getElementById('bitacoraSearch')?.value || '').toLowerCase().trim();
 
-  const rows = trips.filter(t => {
+  const fmtMoney = v => (v || v === 0) && v !== 0 ? '$' + Number(v).toLocaleString('es-CL') : '—';
+  const EDIT_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+  const DEL_SVG  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/></svg>`;
+
+  const ocaDateEl = document.getElementById('pgOcaDate');
+  if (ocaDateEl) ocaDateEl.textContent = selectedDate ? selectedDate.split('-').reverse().join('/') : '';
+
+  // ── EMPRESARIALES ─────────────────────────────────────────────────────────
+  const empBody  = document.getElementById('pgEmpBody');
+  const empEmpty = document.getElementById('pgEmpEmpty');
+  if (!empBody) return;
+
+  const empRoutes = q
+    ? rutas.filter(r => `${r.purchaseOrder||''} ${r.clientFullName||''} ${r.origin||''} ${r.destination||''} ${r.comercial||''}`.toLowerCase().includes(q))
+    : rutas;
+
+  if (!empRoutes.length) {
+    empBody.innerHTML = '';
+    if (empEmpty) empEmpty.style.display = 'flex';
+  } else {
+    if (empEmpty) empEmpty.style.display = 'none';
+    empBody.innerHTML = empRoutes.map((r, i) => {
+      const t = selectedDate
+        ? trips.find(x => x.routeId === r.id && (x.serviceStartDate || x.departureDate || '').slice(0,10) === selectedDate)
+        : null;
+      const asignado = !!t;
+      const vehicle  = t?.vehicle        || '—';
+      const driver   = t?.driver         || '—';
+      const phone    = t?.conductorPhone || '—';
+      const cost     = Number(t?.cost            ?? r.cost            ?? 0);
+      const tval     = Number(t?.transporterValue ?? r.transporterValue ?? 0);
+      const utilidad = cost - tval;
+      const uClass   = utilidad >= 0 ? 'bt-util-pos' : 'bt-util-neg';
+      const tripId   = t ? String(t.id) : '';
+      const odsShort = (r.purchaseOrder || '').length > 22 ? r.purchaseOrder.slice(0,22) + '…' : (r.purchaseOrder || '—');
+      return `
+      <tr class="${asignado ? '' : 'pg-row-pending'}">
+        <td>${i + 1}</td>
+        <td title="${esc(r.purchaseOrder||'')}">${esc(odsShort)}</td>
+        <td>${esc(r.clientFullName || '—')}</td>
+        <td>${esc(r.comercial || '—')}</td>
+        <td>${esc(r.origin || '—')}</td>
+        <td>${esc(r.departureTime || '—')}</td>
+        <td>${esc(r.destination || '—')}</td>
+        <td>${esc(r.returnTime || '—')}</td>
+        <td>${esc(vehicle)}</td>
+        <td>${esc(driver)}</td>
+        <td>${esc(phone)}</td>
+        <td>${fmtMoney(cost)}</td>
+        <td>${fmtMoney(tval)}</td>
+        <td class="${uClass}">${fmtMoney(utilidad)}</td>
+        <td><span class="badge ${asignado ? 'badge-green' : 'badge-pending'}">${asignado ? 'Asignado' : 'Pendiente'}</span></td>
+        <td class="actions-cell">
+          <button class="btn-icon" title="${asignado ? 'Editar asignación' : 'Asignar conductor'}" onclick="openBitacoraForm(${tripId || 'null'}, '${r.id}')">${EDIT_SVG}</button>
+          ${tripId ? `<button class="btn-icon danger" title="Quitar asignación" onclick="confirmDeleteBitacora('${tripId}')">${DEL_SVG}</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── OCASIONALES ──────────────────────────────────────────────────────────
+  const ocaBody  = document.getElementById('pgOcaBody');
+  const ocaEmpty = document.getElementById('pgOcaEmpty');
+  if (!ocaBody) return;
+
+  const ocasRows = trips.filter(t => {
+    if (t.routeId) return false;
     const d = (t.serviceStartDate || t.departureDate || '').slice(0, 10);
-    if (from && d < from) return false;
-    if (to   && d > to)   return false;
+    if (selectedDate && d !== selectedDate) return false;
     if (q) {
-      const hay = `${t.clientFullName||''} ${t.purchaseOrder||''} ${t.origin||''} ${t.destination||''} ${t.serviceType||''} ${t.driver||''} ${t.vehicle||''}`.toLowerCase();
+      const hay = `${t.clientFullName||''} ${t.purchaseOrder||''} ${t.origin||''} ${t.destination||''} ${t.driver||''} ${t.vehicle||''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   }).sort((a, b) => {
     const da = (a.serviceStartDate || a.departureDate || '');
-    const db = (b.serviceStartDate || b.departureDate || '');
-    return db.localeCompare(da);
+    const db_ = (b.serviceStartDate || b.departureDate || '');
+    return db_.localeCompare(da);
   });
 
-  const tbody = document.getElementById('bitacoraBody');
-  const empty = document.getElementById('bitacoraEmpty');
-  if (!tbody) return;
-
-  if (!rows.length) {
-    tbody.innerHTML = '';
-    if (empty) empty.style.display = 'flex';
-    return;
+  if (!ocasRows.length) {
+    ocaBody.innerHTML = '';
+    if (ocaEmpty) ocaEmpty.style.display = 'flex';
+  } else {
+    if (ocaEmpty) ocaEmpty.style.display = 'none';
+    ocaBody.innerHTML = ocasRows.map((t, i) => {
+      const utilidad = Number(t.cost||0) - Number(t.transporterValue||0);
+      const uClass   = utilidad >= 0 ? 'bt-util-pos' : 'bt-util-neg';
+      return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${esc(t.purchaseOrder || '—')}</td>
+        <td>${esc(t.clientFullName || t.clientName || '—')}</td>
+        <td><span class="badge badge-${t.serviceType === 'Empresarial' ? 'blue' : 'green'}">${esc(t.serviceType||'—')}</span></td>
+        <td>${esc(t.entryChannel||'—')}</td>
+        <td>${esc(t.comercial||'—')}</td>
+        <td>${esc(t.origin||'—')}</td>
+        <td>${esc(t.departureTime||'—')}</td>
+        <td>${esc(t.destination||'—')}</td>
+        <td>${esc(t.returnTime||'—')}</td>
+        <td>${esc(t.vehicle||'—')}</td>
+        <td>${esc(t.proveedor||'—')}</td>
+        <td>${esc(t.driver||'—')}</td>
+        <td>${esc(t.conductorPhone||'—')}</td>
+        <td>${fmtMoney(t.cost)}</td>
+        <td>${fmtMoney(t.transporterValue)}</td>
+        <td class="${uClass}">${fmtMoney(utilidad)}</td>
+        <td class="actions-cell">
+          <button class="btn-icon" title="Editar" onclick="openBitacoraForm(${t.id})">${EDIT_SVG}</button>
+          <button class="btn-icon danger" title="Eliminar" onclick="confirmDeleteBitacora(${t.id})">${DEL_SVG}</button>
+        </td>
+      </tr>`;
+    }).join('');
   }
-  if (empty) empty.style.display = 'none';
-
-  const fmtDate  = d => d ? d.split('-').reverse().join('/') : '—';
-  const fmtMoney = v => v ? '$' + Number(v).toLocaleString('es-CL') : '—';
-  const EDIT_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-  const DEL_SVG  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/></svg>`;
-
-  tbody.innerHTML = rows.map((t, i) => {
-    const utilidad = Number(t.cost || 0) - Number(t.transporterValue || 0);
-    const uClass   = utilidad >= 0 ? 'bt-util-pos' : 'bt-util-neg';
-    return `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${fmtDate((t.serviceStartDate || t.departureDate || '').slice(0,10))}</td>
-      <td>${esc(t.purchaseOrder || '—')}</td>
-      <td>${esc(t.clientFullName || t.clientName || '—')}</td>
-      <td><span class="badge badge-${t.serviceType === 'Empresarial' ? 'blue' : 'green'}">${esc(t.serviceType || '—')}</span></td>
-      <td>${esc(t.entryChannel || '—')}</td>
-      <td>${esc(t.comercial || '—')}</td>
-      <td>${esc(t.origin || '—')}</td>
-      <td>${esc(t.departureTime || '—')}</td>
-      <td>${esc(t.destination || '—')}</td>
-      <td>${esc(t.returnTime || '—')}</td>
-      <td>${esc(t.vehicle || '—')}</td>
-      <td>${esc(t.proveedor || '—')}</td>
-      <td>${esc(t.driver || '—')}</td>
-      <td>${esc(t.conductorPhone || '—')}</td>
-      <td>${fmtMoney(t.cost)}</td>
-      <td>${fmtMoney(t.transporterValue)}</td>
-      <td class="${uClass}">${fmtMoney(utilidad)}</td>
-      <td class="actions-cell">
-        <button class="btn-icon" title="Editar" onclick="openBitacoraForm(${t.id})">${EDIT_SVG}</button>
-        <button class="btn-icon danger" title="Eliminar" onclick="confirmDeleteBitacora(${t.id})">${DEL_SVG}</button>
-      </td>
-    </tr>`;
-  }).join('');
 }
 
-function openBitacoraForm(tripId) {
-  const t = tripId != null ? trips.find(x => String(x.id) === String(tripId)) : null;
-  document.getElementById('bitacoraFormTitle').textContent = t ? 'Editar Servicio' : 'Nuevo Servicio Empresarial';
-  document.getElementById('bt_id').value             = tripId != null ? String(tripId) : '';
-  document.getElementById('bt_fecha').value          = (t?.serviceStartDate || t?.departureDate || '').slice(0,10);
-  document.getElementById('bt_ods').value            = t?.purchaseOrder  || '';
-  document.getElementById('bt_cliente').value        = t?.clientFullName || t?.clientName || '';
-  document.getElementById('bt_clienteNit').value     = t?.clientNit      || '';
-  document.getElementById('bt_tipo').value           = t?.serviceType    || 'Empresarial';
-  document.getElementById('bt_canal').value          = t?.entryChannel   || 'Cliente Antiguo';
-  document.getElementById('bt_comercial').value      = t?.comercial      || '';
-  document.getElementById('bt_origen').value         = t?.origin         || '';
-  document.getElementById('bt_horaSalida').value     = t?.departureTime  || '';
-  document.getElementById('bt_destino').value        = t?.destination    || '';
-  document.getElementById('bt_horaRegreso').value    = t?.returnTime     || '';
-  document.getElementById('bt_placa').value          = t?.vehicle        || '';
-  document.getElementById('bt_proveedor').value      = t?.proveedor      || 'Tercero';
-  document.getElementById('bt_conductor').value      = t?.driver         || '';
-  document.getElementById('bt_conductorCel').value   = t?.conductorPhone || '';
-  document.getElementById('bt_valorServicio').value  = t?.cost            ? Number(t.cost).toLocaleString('es-CL')            : '';
-  document.getElementById('bt_valorProveedor').value = t?.transporterValue ? Number(t.transporterValue).toLocaleString('es-CL') : '';
+function openBitacoraForm(tripId, routeId) {
+  const rp = document.getElementById('bt_routePicker');
+  const fmtV = v => v ? Number(v).toLocaleString('es-CL') : '';
+
+  if (routeId) {
+    // Asignar/editar conductor para una ruta empresarial en la fecha seleccionada
+    const r = rutas.find(x => x.id === routeId);
+    const t = (tripId != null && tripId !== 'null') ? trips.find(x => String(x.id) === String(tripId)) : null;
+    const selectedDate = document.getElementById('pgDate')?.value || '';
+    if (rp) rp.style.display = 'none';
+    document.getElementById('bt_routeId').value       = routeId;
+    document.getElementById('bt_id').value            = t ? String(t.id) : '';
+    document.getElementById('bt_fecha').value         = t ? (t.serviceStartDate || '').slice(0,10) : selectedDate;
+    document.getElementById('bt_ods').value           = r?.purchaseOrder  || '';
+    document.getElementById('bt_cliente').value       = r?.clientFullName || '';
+    document.getElementById('bt_clienteNit').value    = r?.clientNit      || '';
+    document.getElementById('bt_tipo').value          = 'Empresarial';
+    document.getElementById('bt_canal').value         = t?.entryChannel   || 'Cliente Antiguo';
+    document.getElementById('bt_comercial').value     = r?.comercial      || '';
+    document.getElementById('bt_origen').value        = r?.origin         || '';
+    document.getElementById('bt_horaSalida').value    = r?.departureTime  || '';
+    document.getElementById('bt_destino').value       = r?.destination    || '';
+    document.getElementById('bt_horaRegreso').value   = r?.returnTime     || '';
+    document.getElementById('bt_placa').value         = t?.vehicle        || '';
+    document.getElementById('bt_proveedor').value     = t?.proveedor      || r?.proveedor || 'Tercero';
+    document.getElementById('bt_conductor').value     = t?.driver         || '';
+    document.getElementById('bt_conductorCel').value  = t?.conductorPhone || '';
+    document.getElementById('bt_valorServicio').value  = fmtV(t?.cost            ?? r?.cost);
+    document.getElementById('bt_valorProveedor').value = fmtV(t?.transporterValue ?? r?.transporterValue);
+    document.getElementById('bitacoraFormTitle').textContent = t ? 'Editar Asignación' : 'Asignar Conductor';
+
+  } else if (tripId != null && tripId !== 'null') {
+    // Editar viaje ocasional
+    const t = trips.find(x => String(x.id) === String(tripId));
+    if (rp) rp.style.display = 'none';
+    document.getElementById('bt_routeId').value       = '';
+    document.getElementById('bt_id').value            = String(tripId);
+    document.getElementById('bt_fecha').value         = (t?.serviceStartDate || t?.departureDate || '').slice(0,10);
+    document.getElementById('bt_ods').value           = t?.purchaseOrder  || '';
+    document.getElementById('bt_cliente').value       = t?.clientFullName || t?.clientName || '';
+    document.getElementById('bt_clienteNit').value    = t?.clientNit      || '';
+    document.getElementById('bt_tipo').value          = t?.serviceType    || 'Empresarial';
+    document.getElementById('bt_canal').value         = t?.entryChannel   || 'Cliente Antiguo';
+    document.getElementById('bt_comercial').value     = t?.comercial      || '';
+    document.getElementById('bt_origen').value        = t?.origin         || '';
+    document.getElementById('bt_horaSalida').value    = t?.departureTime  || '';
+    document.getElementById('bt_destino').value       = t?.destination    || '';
+    document.getElementById('bt_horaRegreso').value   = t?.returnTime     || '';
+    document.getElementById('bt_placa').value         = t?.vehicle        || '';
+    document.getElementById('bt_proveedor').value     = t?.proveedor      || 'Tercero';
+    document.getElementById('bt_conductor').value     = t?.driver         || '';
+    document.getElementById('bt_conductorCel').value  = t?.conductorPhone || '';
+    document.getElementById('bt_valorServicio').value  = fmtV(t?.cost);
+    document.getElementById('bt_valorProveedor').value = fmtV(t?.transporterValue);
+    document.getElementById('bitacoraFormTitle').textContent = 'Editar Servicio';
+
+  } else {
+    // Nuevo empresarial — muestra buscador de ruta
+    if (rp) rp.style.display = 'block';
+    document.getElementById('bt_routeId').value       = '';
+    document.getElementById('bt_id').value            = '';
+    document.getElementById('bt_fecha').value         = document.getElementById('pgDate')?.value || '';
+    document.getElementById('bt_ods').value           = '';
+    document.getElementById('bt_cliente').value       = '';
+    document.getElementById('bt_clienteNit').value    = '';
+    document.getElementById('bt_tipo').value          = 'Empresarial';
+    document.getElementById('bt_canal').value         = 'Cliente Antiguo';
+    document.getElementById('bt_comercial').value     = '';
+    document.getElementById('bt_origen').value        = '';
+    document.getElementById('bt_horaSalida').value    = '';
+    document.getElementById('bt_destino').value       = '';
+    document.getElementById('bt_horaRegreso').value   = '';
+    document.getElementById('bt_placa').value         = '';
+    document.getElementById('bt_proveedor').value     = 'Tercero';
+    document.getElementById('bt_conductor').value     = '';
+    document.getElementById('bt_conductorCel').value  = '';
+    document.getElementById('bt_valorServicio').value  = '';
+    document.getElementById('bt_valorProveedor').value = '';
+    const rs = document.getElementById('bt_rutaSearch');
+    if (rs) rs.value = '';
+    document.getElementById('bitacoraFormTitle').textContent = 'Nuevo Servicio Empresarial';
+  }
+
   document.getElementById('bitacoraOverlay').classList.add('open');
 }
 
@@ -1099,80 +1233,106 @@ function closeBitacoraForm() {
 
 function saveBitacora() {
   const tripId  = document.getElementById('bt_id').value.trim();
+  const routeId = document.getElementById('bt_routeId').value.trim();
   const fecha   = document.getElementById('bt_fecha').value;
-  const cliente = document.getElementById('bt_cliente').value.trim();
-  const origen  = document.getElementById('bt_origen').value.trim();
-  const destino = document.getElementById('bt_destino').value.trim();
 
-  if (!fecha || !cliente || !origen || !destino) {
-    showToast('Completa Fecha, Cliente, Origen y Destino', 'error');
-    return;
-  }
+  if (!fecha) { showToast('Completa la Fecha', 'error'); return; }
 
   const parseBt = id => Number((document.getElementById(id)?.value || '0').replace(/\./g, '').replace(/,/g, '')) || 0;
-
-  const base = {
-    serviceStartDate: fecha,
-    departureDate:    fecha,
-    purchaseOrder:    document.getElementById('bt_ods').value.trim(),
-    clientFullName:   cliente,
-    clientNit:        document.getElementById('bt_clienteNit').value.trim(),
-    serviceType:      document.getElementById('bt_tipo').value,
-    entryChannel:     document.getElementById('bt_canal').value,
-    comercial:        document.getElementById('bt_comercial').value.trim(),
-    origin:           origen,
-    departureTime:    document.getElementById('bt_horaSalida').value,
-    destination:      destino,
-    returnTime:       document.getElementById('bt_horaRegreso').value.trim() || 'N/A',
-    vehicle:          document.getElementById('bt_placa').value.trim(),
-    proveedor:        document.getElementById('bt_proveedor').value,
-    driver:           document.getElementById('bt_conductor').value.trim(),
-    conductorPhone:   document.getElementById('bt_conductorCel').value.trim(),
-    cost:             parseBt('bt_valorServicio'),
-    transporterValue: parseBt('bt_valorProveedor'),
-    updatedAt:        new Date().toISOString(),
-  };
-
   const btn = document.getElementById('bt_saveBtn');
   btn.disabled = true;
 
-  let ref, data;
-  if (tripId) {
-    ref  = db.collection('trips').doc(tripId);
-    data = base;
-  } else {
-    const newId = nextId();
-    ref  = db.collection('trips').doc(String(newId));
-    data = {
-      ...base,
-      id:            newId,
-      clientName:    cliente,
-      clientPhone:   '',
-      clientEmail:   '',
-      invoiceEmail:  '',
-      invoiceDetail: '',
-      paymentMethod: '',
-      paymentStatus: 'Pendiente',
-      tripStatus:    'Pendiente',
-      internalNotes: '',
-      costCenter:    '',
-      serviceEndDate: fecha,
-      returnDate:    fecha,
-      passengers:    '',
-      observations:  '',
-      dueDate:       '',
-      invoiceDate:   '',
-      createdAt:     new Date().toISOString(),
-    };
-  }
+  if (routeId) {
+    // Asignación de conductor a una ruta empresarial
+    const r = rutas.find(x => x.id === routeId);
+    if (!r) { showToast('Ruta no encontrada', 'error'); btn.disabled = false; return; }
 
-  ref.set(data, { merge: true })
-    .then(() => {
-      closeBitacoraForm();
-      showToast(tripId ? 'Servicio actualizado' : 'Servicio creado', 'success');
-    })
-    .catch(() => showToast('Error al guardar', 'error'))
-    .finally(() => { btn.disabled = false; });
+    const base = {
+      routeId,
+      serviceStartDate: fecha,
+      departureDate:    fecha,
+      purchaseOrder:    r.purchaseOrder    || '',
+      clientFullName:   r.clientFullName   || '',
+      clientNit:        r.clientNit        || '',
+      serviceType:      'Empresarial',
+      entryChannel:     'EMPRESARIAL',
+      comercial:        r.comercial        || '',
+      origin:           r.origin           || '',
+      departureTime:    r.departureTime    || '',
+      destination:      r.destination      || '',
+      returnTime:       r.returnTime       || '',
+      proveedor:        document.getElementById('bt_proveedor').value,
+      vehicle:          document.getElementById('bt_placa').value.trim(),
+      driver:           document.getElementById('bt_conductor').value.trim(),
+      conductorPhone:   document.getElementById('bt_conductorCel').value.trim(),
+      cost:             parseBt('bt_valorServicio'),
+      transporterValue: parseBt('bt_valorProveedor'),
+      updatedAt:        new Date().toISOString(),
+    };
+
+    let ref, data;
+    if (tripId) {
+      ref  = db.collection('trips').doc(tripId);
+      data = base;
+    } else {
+      const newId = nextId();
+      ref  = db.collection('trips').doc(String(newId));
+      data = { ...base, id: newId, clientName: r.clientFullName || '', paymentStatus: 'Pendiente', tripStatus: 'Pendiente', internalNotes: '', createdAt: new Date().toISOString() };
+    }
+
+    ref.set(data, { merge: true })
+      .then(() => { closeBitacoraForm(); showToast(tripId ? 'Asignación actualizada' : 'Conductor asignado', 'success'); })
+      .catch(() => showToast('Error al guardar', 'error'))
+      .finally(() => { btn.disabled = false; });
+
+  } else {
+    // Viaje ocasional (manual, sin ruta plantilla)
+    const cliente = document.getElementById('bt_cliente').value.trim();
+    const origen  = document.getElementById('bt_origen').value.trim();
+    const destino = document.getElementById('bt_destino').value.trim();
+    if (!cliente || !origen || !destino) {
+      showToast('Completa Cliente, Origen y Destino', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    const base = {
+      serviceStartDate: fecha,
+      departureDate:    fecha,
+      purchaseOrder:    document.getElementById('bt_ods').value.trim(),
+      clientFullName:   cliente,
+      clientNit:        document.getElementById('bt_clienteNit').value.trim(),
+      serviceType:      document.getElementById('bt_tipo').value,
+      entryChannel:     document.getElementById('bt_canal').value,
+      comercial:        document.getElementById('bt_comercial').value.trim(),
+      origin:           origen,
+      departureTime:    document.getElementById('bt_horaSalida').value,
+      destination:      destino,
+      returnTime:       document.getElementById('bt_horaRegreso').value.trim() || 'N/A',
+      vehicle:          document.getElementById('bt_placa').value.trim(),
+      proveedor:        document.getElementById('bt_proveedor').value,
+      driver:           document.getElementById('bt_conductor').value.trim(),
+      conductorPhone:   document.getElementById('bt_conductorCel').value.trim(),
+      cost:             parseBt('bt_valorServicio'),
+      transporterValue: parseBt('bt_valorProveedor'),
+      updatedAt:        new Date().toISOString(),
+    };
+
+    let ref, data;
+    if (tripId) {
+      ref  = db.collection('trips').doc(tripId);
+      data = base;
+    } else {
+      const newId = nextId();
+      ref  = db.collection('trips').doc(String(newId));
+      data = { ...base, id: newId, clientName: cliente, clientPhone: '', clientEmail: '', invoiceEmail: '', invoiceDetail: '', paymentMethod: '', paymentStatus: 'Pendiente', tripStatus: 'Pendiente', internalNotes: '', costCenter: '', serviceEndDate: fecha, returnDate: fecha, passengers: '', observations: '', dueDate: '', invoiceDate: '', createdAt: new Date().toISOString() };
+    }
+
+    ref.set(data, { merge: true })
+      .then(() => { closeBitacoraForm(); showToast(tripId ? 'Servicio actualizado' : 'Servicio creado', 'success'); })
+      .catch(() => showToast('Error al guardar', 'error'))
+      .finally(() => { btn.disabled = false; });
+  }
 }
 
 function confirmDeleteBitacora(tripId) {
@@ -1231,6 +1391,45 @@ function setupBitacoraAutocomplete() {
       if (c) document.getElementById('bt_clienteNit').value = c.clientNit || '';
     }
   );
+
+  // Buscador de ruta empresarial (route picker en modal)
+  const rutaSearch  = document.getElementById('bt_rutaSearch');
+  const rutaResults = document.getElementById('bt_rutaResults');
+  if (rutaSearch && rutaResults) {
+    function showRutas(q) {
+      rutaResults.innerHTML = '';
+      const matches = q
+        ? rutas.filter(r => `${r.clientFullName||''} ${r.purchaseOrder||''} ${r.origin||''} ${r.destination||''}`.toLowerCase().includes(q)).slice(0, 15)
+        : rutas.slice(0, 20);
+      if (!matches.length) { rutaResults.style.display = 'none'; return; }
+      matches.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'ac-item';
+        item.innerHTML = `<span class="ac-name">${esc(r.purchaseOrder || r.clientFullName)}</span><span class="ac-nit">${esc(r.clientFullName)} · ${esc(r.origin||'')} → ${esc(r.destination||'')}</span>`;
+        item.addEventListener('mousedown', () => {
+          document.getElementById('bt_routeId').value       = r.id;
+          document.getElementById('bt_ods').value           = r.purchaseOrder  || '';
+          document.getElementById('bt_cliente').value       = r.clientFullName || '';
+          document.getElementById('bt_clienteNit').value    = r.clientNit      || '';
+          document.getElementById('bt_origen').value        = r.origin         || '';
+          document.getElementById('bt_horaSalida').value    = r.departureTime  || '';
+          document.getElementById('bt_destino').value       = r.destination    || '';
+          document.getElementById('bt_horaRegreso').value   = r.returnTime     || '';
+          document.getElementById('bt_valorServicio').value  = r.cost ? Number(r.cost).toLocaleString('es-CL') : '';
+          document.getElementById('bt_valorProveedor').value = r.transporterValue ? Number(r.transporterValue).toLocaleString('es-CL') : '';
+          document.getElementById('bt_tipo').value          = 'Empresarial';
+          rutaResults.style.display = 'none';
+          rutaSearch.value = r.clientFullName;
+          document.getElementById('bitacoraFormTitle').textContent = 'Asignar: ' + (r.purchaseOrder || r.clientFullName);
+        });
+        rutaResults.appendChild(item);
+      });
+      rutaResults.style.display = 'block';
+    }
+    rutaSearch.addEventListener('focus', () => showRutas(rutaSearch.value.toLowerCase()));
+    rutaSearch.addEventListener('input', () => showRutas(rutaSearch.value.toLowerCase()));
+    rutaSearch.addEventListener('blur',  () => setTimeout(() => { rutaResults.style.display = 'none'; }, 200));
+  }
 }
 
 function setupGenericAC(inputId, getItems, onSelect) {

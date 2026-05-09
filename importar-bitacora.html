@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Importar Bitácora — Transportes Ravel</title>
+  <title>Importar Rutas Empresariales — Transportes Ravel</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:system-ui,sans-serif;background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -25,25 +25,25 @@
 </head>
 <body>
 <div class="card">
-  <h1>📓 Importar Servicios a Bitácora</h1>
-  <p>Importa servicios empresariales desde Excel directamente a la colección de viajes.</p>
+  <h1>🏢 Importar Rutas Empresariales</h1>
+  <p>Carga las rutas fijas de los clientes empresariales. Estas rutas aparecen <strong>todos los días</strong> en la Programación.</p>
 
   <div class="steps">
-    <strong>Formato esperado (11 columnas separadas por Tab):</strong><br/>
-    <code>Fecha · ODS · Cliente · Tipo · Comercial · Origen · H.Salida · Destino · H.Regreso · V.Servicio · V.Proveedor</code><br/><br/>
-    — <strong>Fecha</strong>: formato <code>DD/MM/AAAA</code> o <code>AAAA-MM-DD</code><br/>
+    <strong>Formato esperado (10 columnas separadas por Tab — sin fecha):</strong><br/>
+    <code>ODS · Cliente · Tipo · Comercial · Origen · H.Salida · Destino · H.Regreso · V.Servicio · V.Proveedor</code><br/><br/>
     — <strong>H.Regreso</strong> puede ser <code>N/A</code> o vacío<br/>
     — <strong>V.Servicio / V.Proveedor</strong>: formato colombiano con puntos como miles (ej: <code>515.939</code>)<br/>
-    — <strong>V.Proveedor</strong> puede incluir texto extra (ej: <code>412.751 cal-007 …</code>) — solo se toma el número<br/><br/>
-    1. Agrega la columna de <strong>Fecha</strong> en Excel como primera columna<br/>
-    2. Selecciona las filas → <strong>Ctrl+C</strong> → pega aquí con <strong>Ctrl+V</strong><br/>
-    3. Clic en <strong>Importar</strong>
+    — <strong>V.Proveedor</strong> puede incluir texto extra (ej: <code>412.751 cal-007 …</code>) — solo se toma el número<br/>
+    — Si ya existe la ruta, se actualiza (no se duplica)<br/><br/>
+    1. Selecciona las filas en Excel → <strong>Ctrl+C</strong><br/>
+    2. Pega aquí con <strong>Ctrl+V</strong><br/>
+    3. Clic en <strong>Importar Rutas</strong>
   </div>
 
-  <textarea id="data" placeholder="Pega aquí los datos copiados del Excel...&#10;&#10;Ejemplo:&#10;09/05/2026	A0016 BUS AM RUTA SUR COMPLETO	EXCOTOLING	EMPRESARIAL	JOSE	CALDAS	04:30	ZONA FRANCA	15:30	515.939	412.751 cal-007&#10;10/05/2026	A0008 MICRO SUR BAJA TURNO NOCHE	EXCOTOLING	EMPRESARIAL	JOSE	CALDAS	06:00	SAN DIEGO	N/A	229.858	183.886"></textarea>
+  <textarea id="data" placeholder="Pega aquí los datos copiados del Excel...&#10;&#10;Ejemplo:&#10;A0016 BUS AM RUTA SUR COMPLETO	EXCOTOLING	EMPRESARIAL	JOSE	CALDAS	04:30	ZONA FRANCA	15:30	515.939	412.751 cal-007&#10;A0008 MICRO SUR BAJA TURNO NOCHE	EXCOTOLING	EMPRESARIAL	JOSE	CALDAS	06:00	SAN DIEGO	N/A	229.858	183.886"></textarea>
 
   <div class="btns">
-    <button class="btn-primary" id="importBtn" onclick="importar()">Importar a Bitácora</button>
+    <button class="btn-primary" id="importBtn" onclick="importar()">Importar Rutas</button>
     <button class="btn-outline" onclick="document.getElementById('data').value=''">Limpiar</button>
   </div>
 
@@ -78,15 +78,11 @@
     return parseInt(token.replace(/\./g, ''), 10) || 0;
   }
 
-  // Convierte DD/MM/AAAA o AAAA-MM-DD a AAAA-MM-DD
-  function parseFecha(str) {
-    if (!str) return '';
-    str = str.trim();
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-      const [d, m, a] = str.split('/');
-      return `${a}-${m}-${d}`;
-    }
-    return str; // ya en formato ISO
+  // Genera un ID estable basado en cliente + ODS (para re-importar sin duplicar)
+  function makeDocId(cliente, ods) {
+    const c = (cliente || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
+    const o = (ods     || '').replace(/[^A-Z0-9]/gi, '_').toUpperCase().slice(0, 30);
+    return `${c}_${o}`.replace(/_+/g, '_').replace(/^_|_$/g, '');
   }
 
   async function importar() {
@@ -99,19 +95,11 @@
     document.getElementById('log').innerHTML = '';
 
     try {
-      // Obtener el mayor ID actual
-      log('🔎 Obteniendo ID máximo actual...', 'info');
-      const snapshot = await db.collection('trips').get();
-      let nextId = snapshot.docs.reduce((max, d) => {
-        const id = Number(d.data().id) || 0;
-        return id > max ? id : max;
-      }, 0) + 1;
-
       const filas = raw.split('\n')
         .map(l => l.split('\t').map(c => c.trim()))
         .filter(f => f.length >= 3 && f[0]);
 
-      log(`📂 ${filas.length} filas encontradas. Comenzando desde ID ${nextId}...`);
+      log(`📂 ${filas.length} filas encontradas...`);
 
       let ok = 0, omitidas = 0;
       let batch = db.batch();
@@ -119,61 +107,46 @@
       const MAX_BATCH = 400;
 
       for (const f of filas) {
-        const fecha          = parseFecha(f[0] || '');
-        const ods            = f[1] || '';
-        const cliente        = f[2] || '';
-        const tipo           = f[3] || 'EMPRESARIAL';
-        const comercial      = f[4] || '';
-        const origen         = f[5] || '';
-        const horaSalida     = f[6] || '';
-        const destino        = f[7] || '';
-        const raw8           = (f[8] || '').trim();
-        const horaRegreso    = raw8.toUpperCase() === 'N/A' ? '' : raw8;
-        const valorServicio  = parseMonto(f[9] || '');
-        const valorProveedor = parseMonto(f[10] || '');
+        const ods            = f[0] || '';
+        const cliente        = f[1] || '';
+        const comercial      = f[3] || '';
+        const origen         = f[4] || '';
+        const horaSalida     = f[5] || '';
+        const destino        = f[6] || '';
+        const raw7           = (f[7] || '').trim();
+        const horaRegreso    = raw7.toUpperCase() === 'N/A' ? '' : raw7;
+        const valorServicio  = parseMonto(f[8] || '');
+        const valorProveedor = parseMonto(f[9] || '');
 
-        if (!fecha || !cliente || !origen || !destino) {
-          log(`⚠ Fila omitida (faltan campos): "${ods || f[0]}"`, 'err');
+        if (!cliente || !origen || !destino) {
+          log(`⚠ Fila omitida (faltan cliente/origen/destino): "${ods}"`, 'err');
           omitidas++;
           continue;
         }
 
-        const tripId = nextId++;
-        const ref = db.collection('trips').doc(String(tripId));
+        const docId = makeDocId(cliente, ods);
+        const ref = db.collection('rutasEmpresariales').doc(docId);
         batch.set(ref, {
-          id:               tripId,
           purchaseOrder:    ods,
           clientFullName:   cliente,
           clientNit:        '',
-          clientName:       cliente,
-          serviceType:      tipo,
-          entryChannel:     'EMPRESARIAL',
           comercial,
           origin:           origen,
           departureTime:    horaSalida,
           destination:      destino,
           returnTime:       horaRegreso,
-          serviceStartDate: fecha,
-          departureDate:    fecha,
           cost:             valorServicio,
           transporterValue: valorProveedor,
-          vehicle:          '',
-          proveedor:        '',
-          driver:           '',
-          conductorPhone:   '',
-          paymentStatus:    'Pendiente',
-          tripStatus:       'Pendiente',
-          internalNotes:    '',
-          createdAt:        new Date().toISOString(),
+          proveedor:        'Tercero',
           updatedAt:        new Date().toISOString(),
-        });
+        }, { merge: true });
 
         ok++;
         batchCount++;
 
         if (batchCount === MAX_BATCH) {
           await batch.commit();
-          log(`✅ ${ok} servicios guardados...`, 'ok');
+          log(`✅ ${ok} rutas guardadas...`, 'ok');
           batch = db.batch();
           batchCount = 0;
         }
@@ -183,14 +156,14 @@
         await batch.commit();
       }
 
-      log(`✅ Importación completa: ${ok} servicios añadidos a la Bitácora.`, 'ok');
+      log(`✅ Importación completa: ${ok} rutas empresariales cargadas.`, 'ok');
       if (omitidas) log(`⚠ ${omitidas} filas omitidas por datos incompletos.`, 'err');
 
     } catch (e) {
       log(`❌ Error: ${e.message}`, 'err');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Importar a Bitácora';
+      btn.textContent = 'Importar Rutas';
     }
   }
 </script>

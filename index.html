@@ -397,7 +397,7 @@
       </a>
       <a href="#" class="nav-item" data-view="bitacora">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
-        <span>Bitácora</span>
+        <span>Programación</span>
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -705,47 +705,56 @@
       <!-- BITÁCORA VIEW -->
       <section class="view" id="view-bitacora">
         <div class="page-header">
-          <h1>Bitácora de Servicios</h1>
-          <p>Registro de servicios fijos y recurrentes</p>
+          <h1>Programación Diaria</h1>
+          <p>Rutas empresariales y servicios ocasionales</p>
         </div>
         <div class="card">
           <div class="filters-bar">
-            <input type="text" id="bitacoraSearch" placeholder="Buscar cliente, ODS, origen, placa..." class="search-input" oninput="renderBitacora()" />
-            <input type="date" id="btDateFrom" class="filter-select" onchange="renderBitacora()" title="Desde" />
-            <input type="date" id="btDateTo"   class="filter-select" onchange="renderBitacora()" title="Hasta" />
+            <div class="date-nav">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:16px;" onclick="pgChangeDate(-1)">&#8592;</button>
+              <input type="date" id="pgDate" class="filter-select" onchange="renderBitacora()" />
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:16px;" onclick="pgChangeDate(1)">&#8594;</button>
+            </div>
+            <input type="text" id="bitacoraSearch" placeholder="Buscar cliente, ODS, origen..." class="search-input" oninput="renderBitacora()" />
             <button class="btn btn-primary" onclick="openBitacoraForm()">+ Nuevo Empresarial</button>
           </div>
+
+          <div class="prog-section-label">EMPRESARIALES</div>
           <div class="table-wrapper">
             <table class="data-table bitacora-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Fecha</th>
-                  <th>ODS</th>
-                  <th>Cliente</th>
-                  <th>Tipo</th>
-                  <th>Canal</th>
-                  <th>Comercial</th>
-                  <th>Origen</th>
-                  <th>H.S</th>
-                  <th>Destino</th>
-                  <th>H.R</th>
-                  <th>Placa</th>
-                  <th>Proveedor</th>
-                  <th>Conductor</th>
-                  <th>Cel</th>
-                  <th>V. Servicio</th>
-                  <th>Pago Serv.</th>
-                  <th>Utilidad</th>
-                  <th>Acciones</th>
+                  <th>#</th><th>ODS</th><th>Cliente</th><th>Comercial</th>
+                  <th>Origen</th><th>H.S</th><th>Destino</th><th>H.R</th>
+                  <th>Placa</th><th>Conductor</th><th>Cel</th>
+                  <th>V. Servicio</th><th>Pago</th><th>Utilidad</th><th>Estado</th><th>Acciones</th>
                 </tr>
               </thead>
-              <tbody id="bitacoraBody"></tbody>
+              <tbody id="pgEmpBody"></tbody>
             </table>
           </div>
-          <div class="table-empty" id="bitacoraEmpty" style="display:none;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            <p>No hay servicios registrados aún</p>
+          <div class="table-empty" id="pgEmpEmpty" style="display:none;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <p>No hay rutas empresariales. Usa <strong>importar-bitacora.html</strong> para cargar rutas.</p>
+          </div>
+
+          <div class="prog-section-label" style="margin-top:28px;">OCASIONALES — <span id="pgOcaDate" style="font-weight:400;opacity:.75"></span></div>
+          <div class="table-wrapper">
+            <table class="data-table bitacora-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>ODS</th><th>Cliente</th><th>Tipo</th><th>Canal</th>
+                  <th>Comercial</th><th>Origen</th><th>H.S</th><th>Destino</th><th>H.R</th>
+                  <th>Placa</th><th>Proveedor</th><th>Conductor</th><th>Cel</th>
+                  <th>V. Servicio</th><th>Pago</th><th>Utilidad</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="pgOcaBody"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="pgOcaEmpty" style="display:none;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            <p>Sin servicios ocasionales para esta fecha</p>
           </div>
         </div>
       </section>
@@ -815,6 +824,18 @@
       <div class="modal-body">
         <input type="hidden" id="bt_id" />
         <input type="hidden" id="bt_clienteNit" />
+        <input type="hidden" id="bt_routeId" />
+
+        <!-- Buscador de ruta empresarial (solo para nuevo) -->
+        <div id="bt_routePicker" style="display:none;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:18px;">
+          <label style="font-size:13px;font-weight:600;color:#0369a1;display:block;margin-bottom:8px;">Buscar ruta del cliente</label>
+          <div style="position:relative;">
+            <input type="text" id="bt_rutaSearch" placeholder="Escribe el nombre del cliente o código de ruta..." autocomplete="off"
+                   style="width:100%;padding:9px 12px;border:1.5px solid #bae6fd;border-radius:8px;font-size:13px;outline:none;" />
+            <div id="bt_rutaResults" class="ac-dropdown"></div>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Fecha <span class="required">*</span></label>

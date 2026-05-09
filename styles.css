@@ -939,14 +939,28 @@ body.admin-mode #main    { display: flex  !important; flex-direction: column; fl
 .ac-name { font-weight: 600; color: var(--gray-800); font-size: 13.5px; }
 .ac-nit  { color: var(--gray-400); font-size: 12px; }
 
-/* ===== BITÁCORA ===== */
+/* ===== PROGRAMACIÓN / BITÁCORA ===== */
 .bitacora-table th, .bitacora-table td { white-space: nowrap; font-size: 13px; }
 .bitacora-modal { max-width: 720px; width: 95vw; }
 .bt-util-pos { color: var(--green-600); font-weight: 600; }
 .bt-util-neg { color: var(--red-600);   font-weight: 600; }
 .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
-.badge-blue  { background: var(--blue-100);   color: var(--blue-700); }
-.badge-green { background: var(--green-50);   color: var(--green-600); }
+.badge-blue    { background: var(--blue-100);   color: var(--blue-700); }
+.badge-green   { background: var(--green-50);   color: var(--green-600); }
+.badge-pending { background: #fef9c3; color: #854d0e; }
+
+.prog-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: #64748b;
+  padding: 10px 0 6px;
+  border-top: 1.5px solid #e2e8f0;
+  margin-top: 8px;
+}
+.pg-row-pending td { opacity: .55; }
+.pg-row-pending td:last-child { opacity: 1; }
+.date-nav { display: flex; align-items: center; gap: 4px; }
 
 /* ===== FORMULARIO CLIENTE NUEVO ===== */
 .cf-nuevo-box {
