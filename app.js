@@ -51,6 +51,7 @@ const storage = firebase.storage();
 let trips          = [];
 let clients        = [];
 let costCenters    = [];
+let conductores    = [];
 let bitacoraList   = [];
 let btDeleteId     = null;
 let currentView    = 'dashboard';
@@ -78,6 +79,11 @@ db.collection('clientes').onSnapshot(snapshot => {
 // Sincronizar colección de centros de costos
 db.collection('centrosCostos').onSnapshot(snapshot => {
   costCenters = snapshot.docs.map(d => d.data()).sort((a, b) => a.label.localeCompare(b.label));
+});
+
+// Sincronizar colección de conductores
+db.collection('conductores').onSnapshot(snapshot => {
+  conductores = snapshot.docs.map(d => d.data()).sort((a, b) => (a.conductor || '').localeCompare(b.conductor || ''));
 });
 
 // Sincronizar bitácora
@@ -1043,6 +1049,7 @@ function renderBitacora() {
       <td>${esc(b.horaRegreso || 'N/A')}</td>
       <td>$${Number(b.valorServicio || 0).toLocaleString('es-CL')}</td>
       <td>$${Number(b.valorProveedor || 0).toLocaleString('es-CL')}</td>
+      <td>${esc(b.conductor || '—')}</td>
       <td>${esc(b.centroCostos || '—')}</td>
       <td>${esc(b.ingreso || '—')}</td>
       <td class="actions-cell">
@@ -1070,6 +1077,7 @@ function openBitacoraForm(docId) {
   document.getElementById('bt_horaRegreso').value   = b?.horaRegreso   || '';
   document.getElementById('bt_valorServicio').value = b?.valorServicio ? Number(b.valorServicio).toLocaleString('es-CL') : '';
   document.getElementById('bt_valorProveedor').value= b?.valorProveedor? Number(b.valorProveedor).toLocaleString('es-CL') : '';
+  document.getElementById('bt_conductor').value     = b?.conductor     || '';
   document.getElementById('bt_centroCostos').value  = b?.centroCostos  || '';
   document.getElementById('bt_ingreso').value       = b?.ingreso       || 'Cliente Antiguo';
   document.getElementById('bitacoraOverlay').classList.add('open');
@@ -1103,6 +1111,7 @@ function saveBitacora() {
     horaRegreso:   document.getElementById('bt_horaRegreso').value.trim() || 'N/A',
     valorServicio: parseBt('bt_valorServicio'),
     valorProveedor:parseBt('bt_valorProveedor'),
+    conductor:     document.getElementById('bt_conductor').value.trim(),
     centroCostos:  document.getElementById('bt_centroCostos').value.trim(),
     ingreso:       document.getElementById('bt_ingreso').value,
     updatedAt:     new Date().toISOString(),
@@ -1142,6 +1151,10 @@ document.getElementById('btConfirmDelete').addEventListener('click', () => {
 
 // Autocomplete en el modal de bitácora (reutiliza costCenters y COMERCIALES)
 function setupBitacoraAutocomplete() {
+  // Conductor (placa + nombre)
+  setupGenericAC('bt_conductor', () =>
+    conductores.map(c => ({ label: `${c.placa} — ${c.conductor}`, sub: `${c.pax} pax · ${c.barrio || ''}` }))
+  );
   // Centro de costos
   setupGenericAC('bt_centroCostos', () =>
     costCenters.map(cc => ({ label: cc.label, sub: cc.nit || cc.codigo }))
